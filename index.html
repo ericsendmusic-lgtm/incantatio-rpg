@@ -1288,7 +1288,7 @@ function chatCmd(v){ if (playing && !/^\/(aide|help|\?|commandes)/i.test(v)) RPG
   if (['suivante', 'next', 'skip', 'vague', 'wave', 'v'].includes(c)) { if (room && !isHost) { sys('Seul l\'hôte de la salle peut changer de vague.'); return true; }
     const n = ['vague', 'wave', 'v'].includes(c) && a ? Math.max(1, Math.min(60, parseInt(a, 10) || W.w + 1)) : W.w + 1; skipToWave(n); return true; }
   if (c === 'autel') { altarOpen(); return true; }
-  if (c === 'vie') { me.hp = 100; me.mp = me.maxMp; sys('Vie et mana au maximum.'); return true; }
+  if (c === 'vie') { me.hp = rpgMaxHp(); me.mp = me.maxMp; sys('Vie et mana au maximum.'); return true; }
   if (progCmd(c, a) || wavesCmd(c, a) || v20Cmd(c, a)) return true;
   if (progCmd(c, a) || wavesCmd(c, a)) return true;
   sys('Commande inconnue : /' + c + ' (tapez /aide)'); return true; }
@@ -1430,7 +1430,7 @@ function altarOffer(){ const tags = {}; for (const id of BL) (BLESS.find(b => b.
   if (AUTEL.bonus) { AUTEL.bonus = false; const rr = BLESS.filter(b => b.r >= 2 && !BL.has(b.id) && !out.includes(b) && rbOk(b)); if (rr.length && out.length) out[0] = rr[Math.floor(Math.random()*rr.length)]; }
   return out; }
 function altarOpen(){ if (AUTEL.open) return; AUTEL.offer = altarOffer(); if (!AUTEL.offer.length) return; AUTEL.open = true; const R = rpgCls() ? RAR : ['commune', 'rare', 'légendaire'];
-  $('#altar').innerHTML = '<h3>Autel des choix</h3><div class="cards">' + AUTEL.offer.map((b, i) => `<div class="card r${b.r}" data-i="${i}"><b>${i + 1}</b><h4>${esc(b.n)}</h4><small>${b.f} · ${R[b.r - 1]}</small><p>${esc(b.d)}${rbStack(b)}</p></div>`).join('') + '</div><small class="how">Touches 1, 2, 3 · clic · ou dites « one », « two », « three »</small>';
+  $('#altar').innerHTML = '<h3>Autel des choix</h3><div class="cards">' + AUTEL.offer.map((b, i) => `<div class="card r${b.r}" data-i="${i}"><b>${i + 1}</b><h4>${esc(b.n)}</h4><small>${b.f} · ${R[b.r - 1]}</small><p>${esc(b.d)}${rbStack(b)}</p></div>`).join('') + '</div>' + rpgStatsHTML() + '<small class="how">Touches 1, 2, 3 · clic · ou dites « one », « two », « three »</small>';
   $('#altar').classList.remove('hidden'); sfxChime(); }
 function altarPick(i){ const b = AUTEL.offer[i]; if (!AUTEL.open || !b) return; BL.add(b.id); rbPick(b); archAdd('bless', b.id); AUTEL.open = false; $('#altar').classList.add('hidden'); banner('Bénédiction : ' + b.n, b.d); flash(me.x, me.y, me.z, '#ffd86a', 4, .4); renderBook(); }
 function altarVoice(text){ if (voiceExtras(text)) return true; if (!AUTEL.open) return false; const w = norm(text).split(' '); const map = {one:0, won:0, first:0, un:0, two:1, to:1, too:1, second:1, deux:1, three:2, tree:2, third:2, trois:2}; for (const x of w) if (x in map) { altarPick(map[x]); return true; } return false; }
@@ -2076,8 +2076,8 @@ function wavesQuality(id, Q){ if (hasPact('murmure') && !Q.perfect) Q.q *= .6; }
 /* ---- résurrection incantée : « Rise » près de l'âme d'un allié ---- */
 function riseTarget(){ if (me.dead || !room) return null; for (const [p, o] of others) if (o.dead && Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) < 3.5) return p; return null; }
 const riseNear = () => !!riseTarget();
-const GAME_VER = 'v2.5.1 · 25/11 golem';
-{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.4 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
+const GAME_VER = 'v2.5.2 · 25/11 golem';
+{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.5 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
 function riseStart(){ const p = riseTarget(); if (!p) return false; WV.rise = {peer:p, t:3}; toast('Résurrection : restez près de son âme 3 s'); return true; }
 function riseVoice(n){ if (!/\b(rise|rice|rize|raise|rais)\b/.test(n)) return false; return riseStart(); }
 function riseTick(dt){ const R = WV.rise; if (!R) return; const o = others.get(R.peer); if (!o || !o.dead || me.dead || Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) > 3.8) { WV.rise = null; toast('Résurrection interrompue'); return; }
@@ -2525,9 +2525,11 @@ function allyOwners(){ const a = []; if (playing && me.cls === 'summon') a.push(
 const allyOf = peer => { const k = peer || 'me', mine = k === 'me' || k === me.peer; for (const a of ALLIES.values()) if (a.owner === k || (mine && (a.owner === 'me' || a.owner === me.peer))) return a; return null; };
 const allyWk = () => 1 + .08*Math.max(0, W.w - 1);
 function allyNew(o){ const mx = Math.round(220*allyWk()*(1 + modOf(o.peer, 'gHp'))); const a = {id:allyId++, kind:'golem', owner:o.peer, x:o.x + 2, z:o.z + 2, y:0, hp:mx, max:mx, yaw:0, a:0, atk:0, skinT:0, furyT:0, titanT:0, linkT:0, focus:-1, deadT:0, wk:allyWk(), mv:0}; ALLIES.set(a.id, a); return a; }
+function allyRemove(a){ if (a.g) { scene.remove(a.g); if (a.g.userData.lk) scene.remove(a.g.userData.lk); } ALLIES.delete(a.id); }
 function allyMsg(owner, t){ if (owner === me.peer || owner === 'me') toast(t); else W.hits.push(['amsg', owner, t]); }
 function allyHost(dt){ const O = allyOwners();
-  for (const a of [...ALLIES.values()]) if (!O.some(o => o.peer === a.owner)) ALLIES.delete(a.id);
+  for (const a of [...ALLIES.values()]) { if (O.some(o => o.peer === a.owner || (o.peer === me.peer && a.owner === 'me') || (o.peer === 'me' && a.owner === me.peer))) { a.goneT = 0; continue; } a.goneT = a.goneT || T + 5; if (T > a.goneT) allyRemove(a); }
+  for (const a of ALLIES.values()) if (a.owner === 'me' && me.peer) a.owner = me.peer;
   for (const o of O) if (!allyOf(o.peer)) allyNew(o);
   for (const a of ALLIES.values()) { const o = O.find(q => q.peer === a.owner); if (!o) continue;
     if (allyWk() !== a.wk) { const k = allyWk()/a.wk; a.max = Math.round(a.max*k); a.hp = Math.min(a.max, a.hp*k); a.wk = allyWk(); }
@@ -2578,7 +2580,7 @@ function allyPack(){ return [...ALLIES.values()].map(a => [a.id, a.owner, r2(a.x
 function allyRecv(L){ if (!Array.isArray(L)) return; const seen = new Set();
   for (const t of L) { if (!Array.isArray(t) || !fin(t[0]) || !fin(t[2]) || !fin(t[3])) continue; const [id, owner, x, z, y, hp, mx, fl, yaw, at] = t; seen.add(id); let a = ALLIES.get(id);
     if (!a) { a = {id, kind:'golem', x, z, y:0}; ALLIES.set(id, a); } Object.assign(a, {owner:String(owner), tx:x, tz:z, ty:fin(y) ? y : 0, hp:fin(hp) ? hp : 0, max:fin(mx) ? mx : 1, fl:fin(fl) ? fl : 0, tyaw:fin(yaw) ? yaw : 0}); if (at && !(a.a > 0)) a.a = .5; }
-  for (const [id, a] of ALLIES) if (!seen.has(id)) { if (a.g) scene.remove(a.g); ALLIES.delete(id); } }
+  for (const a of [...ALLIES.values()]) if (!seen.has(a.id)) allyRemove(a); }
 function allyHit(h){ const t = h[0];
   if (t === 'gpunch') { const a = ALLIES.get(h[1]); if (a && fin(h[2])) { a.a = .5; allyPunchFx(a, h[2], h[3], h[4] === 1); } }
   else if (t === 'gslam' && fin(h[1])) allySlamFx(h[1], h[2], h[3]); else if (t === 'gjump' && fin(h[2])) allyJumpFx(h[2], h[3], 5.5);
@@ -2617,7 +2619,7 @@ function golemMesh(){ const g = new THREE.Group(), body = new THREE.Group(); g.a
 /* --- rendu, interface --- */
 function allyTick(dt){
   if (!AL.setup) { AL.setup = 1; allySetup(); }
-  if (!playing) { if (ALLIES.size) { for (const a of ALLIES.values()) if (a.g) { scene.remove(a.g); scene.remove(a.g.userData.lk); } ALLIES.clear(); } allyUI(); return; }
+  if (!playing) { if (ALLIES.size) for (const a of [...ALLIES.values()]) allyRemove(a); allyUI(); return; }
   if (isHost && !(paused && !room)) allyHost(dt);
   for (const a of ALLIES.values()) { if (!a.g) { a.g = golemMesh(); scene.add(a.g); } const U = a.g.userData;
     if (!isHost) { if (a.tx != null) { const k = Math.min(1, dt*10); if (Math.hypot(a.tx - a.x, a.tz - a.z) > 12) { a.x = a.tx; a.z = a.tz; } a.x += (a.tx - a.x)*k; a.z += (a.tz - a.z)*k; a.y += ((a.ty || 0) - a.y)*Math.min(1, dt*14); let dy = (a.tyaw || 0) - (a.yaw || 0); dy = Math.atan2(Math.sin(dy), Math.cos(dy)); a.yaw = (a.yaw || 0) + dy*Math.min(1, dt*8); } a.a = Math.max(0, (a.a || 0) - dt); }
@@ -2852,14 +2854,14 @@ const buffOf = p => RPG.buff[pk_(p)] || (RPG.buff[pk_(p)] = {});
 const bOn = (p, k) => (buffOf(p)[k] || 0) > T;
 /* ---- garde-fous avant le lancer (avant de payer le mana) ---- */
 function rpgBlock(id){ const sp = spellOf(id); if (!sp) return false;
-  if (sp.act === 'berserk' && me.hp >= 30) { toast('Berserker : seulement sous 30 % de vie'); return true; }
+  if (sp.act === 'berserk' && me.hp >= .3*rpgMaxHp()) { toast('Berserker : seulement sous 30 % de vie'); return true; }
   if (sp.act === 'leap' && RPG.leap) return true; return false; }
 /* ---- vitesse, régénération, défense ---- */
 function rpgSpeed(){ let k = 1 + mod('spd'); if (bOn(me.peer, 'apex')) k *= 1.3; if (bOn(me.peer, 'berserk')) k *= 1.1; return k; }
 function rpgRegen(){ return (me.cls === 'glad' ? .35 : 1)*(1 + mod('mana')); }
 function rpgDefend(d){ if (d <= 0) return d; d *= 1 - Math.min(.6, mod('def')); if (me.cls === 'glad') me.mp = Math.min(me.maxMp, me.mp + d*.6*(1 + mod('rage')));
   if (RPG.shield > 0 && T < RPG.shieldT) { const a = Math.min(RPG.shield, d); RPG.shield -= a; d -= a; if (a > 0) { qPop('Bouclier divin', '#ffe9a8'); puff(me.x, me.y - .6, me.z, '#ffe9a8', 8, 3, .5, .5, 1); } }
-  if (RPG.second > T && me.hp - d <= 0) { RPG.second = 0; d = Math.max(0, me.hp - 1); fx.push({delay:.05, run:() => { if (!me.dead) { me.hp = 50; banner('Second souffle !', 'La lumière vous relève'); puff(me.x, me.y - 1, me.z, '#ffe9a8', 40, 5, 1, 1, 3); } }}); }
+  if (RPG.second > T && me.hp - d <= 0) { RPG.second = 0; d = Math.max(0, me.hp - 1); fx.push({delay:.05, run:() => { if (!me.dead) { me.hp = rpgMaxHp()*.5; banner('Second souffle !', 'La lumière vous relève'); puff(me.x, me.y - 1, me.z, '#ffe9a8', 40, 5, 1, 1, 3); } }}); }
   return d; }
 /* ---- attaque de base ---- */
 function rpgBasic2(data){ const c = me.cls;
@@ -2944,13 +2946,13 @@ function fpTick(dt){ const glad = playing && me.cls === 'glad';
 /* ---- interface de classe (Rage, Grâce, Second souffle, bouclier) ---- */
 function classUI(){ let e = $('#clsui'); if (!e) { e = document.createElement('div'); e.id = 'clsui'; e.style.cssText = 'position:fixed;left:36%;transform:translateX(-50%);bottom:96px;text-align:center;font:14px Georgia,serif;color:#ffe9c8;z-index:12;pointer-events:none;text-shadow:0 1px 3px #000'; document.body.appendChild(e); }
   if (!playing) { e.textContent = ''; return; } const parts = [], B = buffOf(me.peer);
-  if (me.cls === 'glad') { for (const [k, n] of [['blood', 'Rune de sang'], ['berserk', 'Berserker'], ['apex', 'Apogée']]) if (B[k] > T) parts.push(n + ' ' + Math.ceil(B[k] - T) + ' s'); if (me.hp < 30 && !(B.berserk > T) && (cds['glad:3'] || 0) < now()) parts.push('<b style="color:#ff5a3a">Berserker disponible !</b>'); }
+  if (me.cls === 'glad') { for (const [k, n] of [['blood', 'Rune de sang'], ['berserk', 'Berserker'], ['apex', 'Apogée']]) if (B[k] > T) parts.push(n + ' ' + Math.ceil(B[k] - T) + ' s'); if (me.hp < .3*rpgMaxHp() && !(B.berserk > T) && (cds['glad:3'] || 0) < now()) parts.push('<b style="color:#ff5a3a">Berserker disponible !</b>'); }
   if (me.cls === 'celest') { parts.push('Grâce céleste ' + Math.floor(RPG.grace) + ' %' + (RPG.grace >= 100 ? ' : prochain sort renforcé' : '')); if (RPG.second > T) parts.push('Second souffle ' + Math.ceil(RPG.second - T) + ' s'); if (RPG.fly > T) parts.push('<b>Ascension ' + Math.ceil(RPG.fly - T) + ' s</b>'); }
   if (RPG.shield > 0 && RPG.shieldT > T) parts.push('Bouclier divin ' + Math.ceil(RPG.shield));
   const h = parts.join('<br>'); if (e.innerHTML !== h) e.innerHTML = h;
   if (me.cls === 'glad') { const b = $('#mpb'); if (b) b.style.background = 'linear-gradient(#ff9a6a,#c8281a 45%,#4a0a06)'; } else { const b = $('#mpb'); if (b && b.style.background) b.style.background = ''; } }
 /* ---- tick ---- */
-function rpgTick2(dt){ if (typeof rpgProgTick === 'function') rpgProgTick(); fpTick(dt); circlesTick(dt); classUI(); if (typeof minTick === 'function') minTick(dt);
+function rpgTick2(dt){ if (playing && !me.dead && rpgCls() && mod('hreg')) me.hp = Math.min(rpgMaxHp(), me.hp + mod('hreg')*dt); if (typeof rpgProgTick === 'function') rpgProgTick(); fpTick(dt); circlesTick(dt); classUI(); if (typeof minTick === 'function') minTick(dt);
   if (playing && me.cls === 'celest' && RPG.hold && !me.dead && RPG.fly <= T && T > RPG.beamT) { RPG.beamT = T + .25; const ally = aimAlly(25); if (ally) RPG.beamTg = 'p:' + ally; else { const o = camera.position, ids = chainTargets(o, aimDir(), 1); RPG.beamTg = typeof ids[0] === 'number' ? ids[0] : null; }
     if (RPG.beamTg != null) castOut('basic'); else { heal(.6); graceAdd(.3); puff(me.x, me.y - .5, me.z, '#ffe9a8', 1, 1, .3, .6, 2); } }
   if (playing && me.cls === 'celest' && RPG.hold && RPG.fly > T && (cds.basic || 0) < now()) { castOut('basic'); }
@@ -2966,7 +2968,7 @@ function rpgClick2(){ if (playing && me.cls === 'celest' && !me.dead) { RPG.hold
 delete CL.necro.soon; CL.necro.basicD = 'Projectile nécrotique. Les âmes des monstres tués se ramassent en passant dessus';
 CL.necro.spells = [
   {n:'Harvest', k:'rpg', act:'harvest', el:'shadow', dmg:0, r:18, mana:15, cd:8, d:'Aspire toutes les âmes au sol à 18 m autour de vous'},
-  {n:'Arise', k:'rpg', act:'arise', el:'shadow', dmg:0, mana:20, cd:3, d:'Relève la meilleure âme de votre réserve permise par votre niveau et votre capacité d\'invocation'},
+  {n:'Arise', k:'rpg', act:'arise', el:'shadow', dmg:0, mana:25, cd:6, d:'Vide toute la réserve d\'âmes : chaque âme récoltée se relève en serviteur qui attaque les monstres'},
   {n:'Macabre Explosion', k:'rpg', act:'macabre', el:'shadow', dmg:45, r:4, mana:28, cd:12, d:'Vos serviteurs explosent : dégâts de zone selon leur vie restante'},
   {n:'Army of the Damned', k:'rpg', act:'army', el:'shadow', dmg:0, mana:30, cd:20, d:'Vos serviteurs gagnent +50 % de dégâts et de vitesse pendant 12 s'},
   {n:'King of the Dead', k:'rpg', act:'king', el:'shadow', ult:1, dmg:60, r:12, mana:75, cd:80, d:'ULTIME : vague d\'énergie noire (dégâts, monstres terrifiés 3 s), armée ×2 dégâts et soignée, 3 goules temporaires 20 s'}];
@@ -2984,11 +2986,12 @@ function soulDrop(m){ if (!isHost || !anyNecro()) return; const t = MT[m.type]; 
 function soulOrb(id, x, z, ty, el){ if (NC.orbs.has(id)) return; const g = new THREE.Group(), c = el ? 0xffd04a : MT[ty].boss ? 0xff4aff : 0xa07aff, s = new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex, color:c, transparent:true, opacity:.9, depthWrite:false, blending:THREE.AdditiveBlending})); s.scale.setScalar(MT[ty].boss ? 1.6 : .9); g.add(s);
   const core = new THREE.Mesh(geo('soulCore', () => new THREE.IcosahedronGeometry(.14, 1)), new THREE.MeshBasicMaterial({color:0xffffff})); g.add(core); g.position.set(x, groundH(x, z) + 1, z); scene.add(g); NC.orbs.set(id, {id, x, z, ty, el, g, t:T}); }
 function soulGone(id){ const o = NC.orbs.get(id); if (!o) return; scene.remove(o.g); NC.orbs.delete(id); }
-function soulTake(o){ soulGone(o.id); if (room) room.emit('cast', {sc:o.id}).catch(()=>{}); if (NC.res.length >= 10 + mod('res')) { qPop('Réserve d\'âmes pleine', '#c8a8ff'); return; } NC.res.push({ty:o.ty, el:o.el ? 1 : 0}); puff(me.x, me.y - .6, me.z, '#c8a8ff', 10, 3, .5, .5, 2); }
+const resMax = () => necroCap(necroLvl(), me.peer).n + Math.round(mod('res'));
+function soulTake(o){ const S = SOUL[o.ty] || {l:1}; if (S.l > necroLvl()) { if (T > (NC.lockT || 0)) { NC.lockT = T + 4; qPop(SOUL_N(o.ty) + ' : âme trop puissante (niveau ' + S.l + ')', '#c8a8ff'); } return; } if (NC.res.length >= resMax()) { if (T > (NC.fullT || 0)) { NC.fullT = T + 4; qPop('Réserve d\'âmes pleine : dites Arise', '#c8a8ff'); } return; } soulGone(o.id); if (room) room.emit('cast', {sc:o.id}).catch(()=>{}); NC.res.push({ty:o.ty, el:o.el ? 1 : 0}); puff(me.x, me.y - .6, me.z, '#c8a8ff', 10, 3, .5, .5, 2); }
 function soulsTick(){ for (const o of [...NC.orbs.values()]) { o.g.position.y = groundH(o.x, o.z) + 1 + Math.sin(T*3 + o.id)*.2; if (Math.random() < .15) puff(o.x, o.g.position.y, o.z, '#a07aff', 1, .6, .25, .8, 1.5);
     if (T - o.t > 25) { soulGone(o.id); continue; } if (playing && me.cls === 'necro' && !me.dead && Math.hypot(o.x - me.x, o.z - me.z) < 2.2) soulTake(o); } }
 /* ---- serviteurs (hôte) ---- */
-function minSpawn(owner, ty, x, z, temp){ const t = MT[ty], wk = 1 + .07*Math.max(0, W.w - 1), lv = necroLvlOf(owner), mx = Math.round(t.hp*(t.boss ? .35 : .9)*wk*(1 + lv*.01)*(1 + modOf(owner, 'mHp'))); const n = {id:NC.mid++, ty, owner, x, z, hp:mx, max:mx, yaw:0, a:0, atk:0, end:T + (temp ? 20 : 75*(1 + modOf(owner, 'mLife'))), temp:!!temp, mv:0, wk, lv}; NC.mins.set(n.id, n); W.hits.push(['nrise', r2(x), r2(z)]); minRiseFx(x, z); return n; }
+function minSpawn(owner, ty, x, z, temp){ const t = MT[ty], wk = 1 + .07*Math.max(0, W.w - 1), lv = necroLvlOf(owner), mx = Math.round(t.hp*(t.boss ? .45 : 1.4)*wk*(1 + lv*.01)*(1 + modOf(owner, 'mHp'))); const n = {id:NC.mid++, ty, owner, x, z, hp:mx, max:mx, yaw:0, a:0, atk:0, end:T + (temp ? 20 : 75*(1 + modOf(owner, 'mLife'))), temp:!!temp, mv:0, wk, lv}; NC.mins.set(n.id, n); W.hits.push(['nrise', r2(x), r2(z)]); minRiseFx(x, z); return n; }
 const necroLvlOf = owner => isMe(owner) ? necroLvl() : ((others.get(owner) || {}).nlv || 1);
 const minsOf = owner => [...NC.mins.values()].filter(n => n.owner === pk_(owner) || (isMe(owner) && isMe(n.owner)));
 function minHost(dt){ for (const n of [...NC.mins.values()]) { const t = MT[n.ty]; if (T > n.end || n.hp <= 0 || (!isMe(n.owner) && !others.has(n.owner))) { minDie(n); continue; } n.a = Math.max(0, n.a - dt); n.mv = 0;
@@ -2997,31 +3000,30 @@ function minHost(dt){ for (const n of [...NC.mins.values()]) { const t = MT[n.ty
     const spd = t.spd*.75*(army ? 1.5 : 1)*(1 + modOf(n.owner, 'mSpd')), dmgK = (army ? 1.5 : 1)*(king ? 2 : 1)*(1 + modOf(n.owner, 'mDmg'))*(n.elite && modOf(n.owner, 'mElite') ? 1.3 : 1);
     if (tg) { const dx = tg.x - n.x, dz = tg.z - n.z, d = Math.hypot(dx, dz) || 1, rg = t.ranged, reach = rg ? 13 : t.reach + MT[tg.type].r*.5; n.yaw = Math.atan2(dx, dz);
       if (d > reach) { if (moveMon(n, dx/d*spd*dt, dz/d*spd*dt, t)) n.mv = 1; }
-      else { n.atk -= dt; if (n.atk <= 0) { n.atk = (rg ? rg.cd*.8 : t.cd); n.a = .4; const dmg = Math.max(6, (rg ? rg.dmg : t.dmg)*1.3)*n.wk*(1 + n.lv*.015)*dmgK; hurt(tg, dmg, {el:'shadow', sn:'Serviteur', rx:1, nid:n.id}, dx/d, dz/d, n.owner === 'me' ? me.peer : n.owner); W.hits.push(['nhit', n.id, r2(tg.x), r2(tg.z), rg ? 1 : 0]); minHitFx(n, tg.x, tg.z, !!rg); } } }
+      else { n.atk -= dt; if (n.atk <= 0) { n.atk = (rg ? rg.cd*.8 : t.cd); n.a = .4; const dmg = Math.max(9, (rg ? rg.dmg : t.dmg)*2)*n.wk*(1 + n.lv*.015)*dmgK; hurt(tg, dmg, {el:'shadow', sn:'Serviteur', rx:1, nid:n.id}, dx/d, dz/d, n.owner === 'me' ? me.peer : n.owner); W.hits.push(['nhit', n.id, r2(tg.x), r2(tg.z), rg ? 1 : 0]); minHitFx(n, tg.x, tg.z, !!rg); } } }
     else { const dx = op.x - n.x, dz = op.z - n.z, d = Math.hypot(dx, dz); if (d > 40) { n.x = op.x + 2; n.z = op.z; } else if (d > 3.5) { n.yaw = Math.atan2(dx, dz); if (moveMon(n, dx/d*spd*dt, dz/d*spd*dt, t)) n.mv = 1; } }
     collide(n, t.r*.8, 60); }
   const arr = [...NC.mins.values()]; for (let i = 0; i < arr.length; i++) for (let j = i + 1; j < arr.length; j++) { const a = arr[i], b = arr[j], rr = (MT[a.ty].r + MT[b.ty].r)*.8, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d < rr && d > 0) { const k = (rr - d)/2/d; a.x -= dx*k; a.z -= dz*k; b.x += dx*k; b.z += dz*k; } } }
 function minDie(n){ NC.mins.delete(n.id); W.hits.push(['ndie', n.id]); minDieFx(n); if (modOf(n.owner, 'mBoom') && T < n.end) { W.hits.push(['nboom', r2(n.x), r2(n.z), 3]); boomFx(n.x, n.z, 3); for (const m of [...mons.values()]) if (Math.hypot(m.x - n.x, m.z - n.z) < 3 + MT[m.type].r) hurt(m, 25*n.wk, {el:'shadow', sn:'Cadavre explosif', rx:1}, 0, 0, n.owner); } }
 function minHurt(id, dmg){ const n = NC.mins.get(id); if (!n) return; n.hp -= dmg; if (n.hp <= 0) minDie(n); }
-function minTarget(m, t, tg, bd){ if (!NC.mins.size || m.charmT > T || t.head || t.prop || t.boss) return null; if (m.nPref === undefined) m.nPref = Math.random() < .35; let best = null, bb = 1e9;
+function minTarget(m, t, tg, bd){ if (!NC.mins.size || m.charmT > T || t.head || t.prop || t.boss) return null; if (m.nPref === undefined) m.nPref = Math.random() < .25; let best = null, bb = 1e9;
   for (const n of NC.mins.values()) { const d = Math.hypot(n.x - m.x, n.z - m.z); if (((m.nPref && d < 12) || (d < 6 && d < bd*.8)) && d < bb) { bb = d; best = n; } }
   return best ? {tg:{peer:'#n' + best.id, x:best.x, z:best.z}, bd:bb} : null; }
 function minHitPlayer(peer, dmg){ if (typeof peer === 'string' && peer.startsWith('#n')) { minHurt(+peer.slice(2), dmg); return true; } return false; }
 /* ---- sorts ---- */
 function necroCast(data, caster, mine, sp, t, dmg, pot, big){ const o = data.o, B = buffOf(caster);
   if (sp.act === 'harvest') { const R = sp.r*big; ringFx(o[0], o[2], R, '#a07aff', .6, 'shadow', 1); if (mine) { let n = 0; for (const s of [...NC.orbs.values()]) if (Math.hypot(s.x - me.x, s.z - me.z) < R) { soulTake(s); n++; } qPop(n ? n + ' âme' + (n > 1 ? 's' : '') + ' récoltée' + (n > 1 ? 's' : '') : 'Aucune âme', '#c8a8ff'); } }
-  else if (sp.act === 'arise') { if (isHost && fin(data.ty) && MT[data.ty]) { const mine_ = minsOf(caster), cap = necroCap(necroLvlOf(caster), caster), used = mine_.filter(n => !n.temp).reduce((a, n) => a + (SOUL[n.ty] || {c:1}).c, 0), big_ = mine_.filter(n => (SOUL[n.ty] || {}).c >= 6).length;
-      if (mine_.filter(n => !n.temp).length < cap.n && used + (SOUL[data.ty] || {c:1}).c <= cap.c && !((SOUL[data.ty] || {}).c >= 6 && big_ >= 2)) { const a = Math.random()*6.28; const n = minSpawn(pk_(caster), data.ty, o[0] + Math.cos(a)*2, o[2] + Math.sin(a)*2); if (data.el === 1) n.elite = 1; } } }
+  else if (sp.act === 'arise') { ringFx(o[0], o[2], 4, '#7dff9c', .6, 'shadow'); if (isHost && Array.isArray(data.tys)) { const L = data.tys.filter(x => Array.isArray(x) && MT[x[0]] && SOUL[x[0]]).slice(0, 12); L.forEach((x, i) => { const a = i/Math.max(1, L.length)*6.28; const n = minSpawn(pk_(caster), x[0], o[0] + Math.cos(a)*2.5, o[2] + Math.sin(a)*2.5); if (x[1] === 1) n.elite = 1; });
+      /* l'armée ne dépasse pas la limite du niveau : les plus anciens serviteurs retombent en poussière ; 2 créatures puissantes au plus */
+      const cap = necroCap(necroLvlOf(caster), caster), arr = minsOf(caster).filter(n => !n.temp).sort((a, b) => a.id - b.id); while (arr.length > cap.n) minDie(arr.shift()); const big = arr.filter(n => (SOUL[n.ty] || {}).c >= 6); while (big.length > 2) minDie(big.shift()); } }
   else if (sp.act === 'macabre') { if (isHost) for (const n of minsOf(caster)) { const R = sp.r*big, d = dmg + n.hp*.3; W.hits.push(['nboom', r2(n.x), r2(n.z), r2(R)]); boomFx(n.x, n.z, R); for (const m of [...mons.values()]) if (Math.hypot(m.x - n.x, m.z - n.z) < R + MT[m.type].r) hurt(m, d, {el:'shadow', sn:sp.n, push:2}, 0, 0, caster); NC.mins.delete(n.id); W.hits.push(['ndie', n.id]); minDieFx(n); } }
   else if (sp.act === 'army') { B.army = T + 12*big; ringFx(o[0], o[2], 8, '#7dff9c', .6, 'shadow', 1); }
   else if (sp.act === 'king') { B.king = T + 20; const R = sp.r*big; banner('Roi des morts !', 'L\'armée des damnés se lève'); shockwave(o[0], groundH(o[0], o[2]) + .2, o[2], R, '#7a3aff', 1.2); ringFx(o[0], o[2], R, '#7a3aff', 1, 'shadow');
     if (isHost) { for (const m of [...mons.values()]) { const d = Math.hypot(m.x - o[0], m.z - o[2]); if (d < R + MT[m.type].r) { hurt(m, dmg, {el:'shadow', sn:sp.n}, (m.x - o[0])/(d || 1), (m.z - o[2])/(d || 1), caster); if (mons.has(m.id) && !MT[m.type].boss && !MT[m.type].head) m.stunT = Math.max(m.stunT || 0, T + 3); } }
       for (const n of minsOf(caster)) n.hp = n.max; for (let i = 0; i < 3; i++) { const a = i/3*6.28; minSpawn(pk_(caster), 1, o[0] + Math.cos(a)*3, o[2] + Math.sin(a)*3, 1); } } } }
 /* le client du nécromancien choisit l'âme à relever (sa réserve est chez lui) */
-function necroData(id, data){ const sp = spellOf(id); if (!sp || sp.act !== 'arise') return; const lv = necroLvl(), cap = necroCap(lv, me.peer), mine_ = [...NC.mins.values()].filter(n => isMe(n.owner) && !n.temp), used = mine_.reduce((a, n) => a + (SOUL[n.ty] || {c:1}).c, 0);
-  const ok = NC.res.map((r, i) => ({ty:r.ty, el:r.el, i, c:(SOUL[r.ty] || {c:1}).c, l:(SOUL[r.ty] || {l:1}).l})).filter(s => s.l <= lv && used + s.c <= cap.c).sort((a, b) => b.c - a.c || b.el - a.el);
-  if (mine_.length >= cap.n) { toast('Armée complète (' + cap.n + ' serviteurs au niveau ' + lv + ')'); return; } if (!ok.length) { toast(NC.res.length ? 'Ces âmes sont trop puissantes pour votre niveau ou votre capacité' : 'Aucune âme en réserve : tuez des monstres et ramassez leurs âmes'); return; }
-  NC.res.splice(ok[0].i, 1); data.ty = ok[0].ty; if (ok[0].el) data.el = 1; qPop('Arise : ' + SOUL_N(ok[0].ty) + (ok[0].el ? ' (élite)' : ''), '#c8a8ff'); }
+function necroData(id, data){ const sp = spellOf(id); if (!sp || sp.act !== 'arise') return; if (!NC.res.length) { toast('Aucune âme en réserve : tuez des monstres et ramassez leurs âmes'); return; }
+  data.tys = NC.res.map(r => [r.ty, r.el ? 1 : 0]); qPop('Arise ! ' + NC.res.length + ' âme' + (NC.res.length > 1 ? 's' : '') + ' se relève' + (NC.res.length > 1 ? 'nt' : ''), '#c8a8ff'); NC.res = []; }
 /* ---- réseau ---- */
 function minPack(){ return [...NC.mins.values()].map(n => [n.id, n.ty, n.owner, r2(n.x), r2(n.z), Math.round(n.hp), n.max, (buffOf(n.owner).army > T ? 1 : 0) | (buffOf(n.owner).king > T ? 2 : 0) | (n.temp ? 4 : 0) | (n.mv ? 8 : 0), r2(n.yaw), n.a > 0 ? 1 : 0]); }
 function minRecv(L){ if (!Array.isArray(L)) return; const seen = new Set(); for (const t of L) { if (!Array.isArray(t) || !fin(t[0]) || !MT[t[1]]) continue; const [id, ty, owner, x, z, hp, mx, fl, yaw, at] = t; seen.add(id); let n = NC.mins.get(id); if (!n) { n = {id, ty, x, z}; NC.mins.set(id, n); }
@@ -3041,6 +3043,7 @@ function minMesh(ty){ const g = monsterMesh(ty), ghost = new THREE.Color(0x7dff9
 function minTick(dt){ if (isHost && playing && !(paused && !room)) minHost(dt);
   for (const n of NC.mins.values()) { if (!n.g) { n.g = minMesh(n.ty); scene.add(n.g); }
     if (!isHost && n.tx != null) { const k = Math.min(1, dt*10); if (Math.hypot(n.tx - n.x, n.tz - n.z) > 10) { n.x = n.tx; n.z = n.tz; } n.x += (n.tx - n.x)*k; n.z += (n.tz - n.z)*k; let dy = (n.tyaw || 0) - (n.yaw || 0); dy = Math.atan2(Math.sin(dy), Math.cos(dy)); n.yaw = (n.yaw || 0) + dy*Math.min(1, dt*8); n.a = Math.max(0, (n.a || 0) - dt); }
+    if (n.g.userData.anim) { const mvT = isHost ? (n.mv ? 1 : 0) : (Math.hypot((n.tx ?? n.x) - n.x, (n.tz ?? n.z) - n.z) > .05 ? 1 : 0); n.mvS = (n.mvS || 0) + (mvT - (n.mvS || 0))*Math.min(1, dt*6); n.g.userData.anim(T + n.id*1.7, n.mvS, clamp((n.a || 0)/.4, 0, 1), 0); }
     const at = n.a > 0 ? Math.sin((1 - n.a/.4)*Math.PI) : 0, fl = isHost ? (buffOf(n.owner).army > T ? 1 : 0) | (buffOf(n.owner).king > T ? 2 : 0) : (n.fl || 0);
     n.g.position.set(n.x + Math.sin(n.yaw || 0)*at*.4, groundH(n.x, n.z) + Math.abs(Math.sin(T*8 + n.id))*.05, n.z + Math.cos(n.yaw || 0)*at*.4); n.g.rotation.y = n.yaw || 0;
     if (n.g.userData.aura) { n.g.userData.aura.material.color.setHex(fl & 2 ? 0xa04aff : fl & 1 ? 0xff5a8a : 0x5aff8a); n.g.userData.aura.material.opacity = .14 + (fl ? .14 : 0) + Math.sin(T*4 + n.id)*.04; }
@@ -3049,9 +3052,9 @@ function minTick(dt){ if (isHost && playing && !(paused && !room)) minHost(dt);
   if (!playing && (NC.mins.size || NC.orbs.size || NC.res.length)) { for (const n of NC.mins.values()) if (n.g) scene.remove(n.g); NC.mins.clear(); for (const o of NC.orbs.values()) scene.remove(o.g); NC.orbs.clear(); NC.res = []; }
   if (playing && me.cls === 'necro' && room && T > (NC.lvT || 0)) { NC.lvT = T + 5; room.emit('cast', {nlv:necroLvl()}).catch(()=>{}); } }
 function necroUI(){ let e = NC.ui; if (!e) { e = NC.ui = document.createElement('div'); e.id = 'necroui'; e.style.cssText = 'position:fixed;left:16px;bottom:122px;font:13px Georgia,serif;color:#e0d0ff;z-index:12;pointer-events:none;text-shadow:0 1px 2px #000;max-width:340px'; document.body.appendChild(e); }
-  if (!playing || me.cls !== 'necro') { e.style.display = 'none'; return; } e.style.display = 'block'; const lv = necroLvl(), cap = necroCap(lv, me.peer), mine_ = [...NC.mins.values()].filter(n => isMe(n.owner)), used = mine_.filter(n => !n.temp).reduce((a, n) => a + (SOUL[n.ty] || {c:1}).c, 0), cnt = {};
+  if (!playing || me.cls !== 'necro') { e.style.display = 'none'; return; } e.style.display = 'block'; const lv = necroLvl(), cap = necroCap(lv, me.peer), mine_ = [...NC.mins.values()].filter(n => isMe(n.owner)), cnt = {};
   NC.res.forEach(r => { const t = r.ty + (r.el ? 'e' : ''); cnt[t] = (cnt[t] || 0) + 1; }); const res = Object.entries(cnt).map(([t, c]) => SOUL_N(parseInt(t)) + (t.endsWith('e') ? ' élite' : '') + (c > 1 ? ' ×' + c : '') + ((SOUL[parseInt(t)] || {l:1}).l > lv ? ' 🔒' : '')).join(', ');
-  const h = '<b style="color:#c8a8ff;font-family:Cinzel,serif">Âmes ' + NC.res.length + '/' + (10 + mod('res')) + '</b> ' + (res || '—') + '<br>Serviteurs ' + mine_.filter(n => !n.temp).length + '/' + cap.n + ' · capacité ' + used + '/' + cap.c + ' (niveau ' + lv + ')';
+  const h = '<b style="color:#c8a8ff;font-family:Cinzel,serif">Âmes ' + NC.res.length + '/' + resMax() + '</b> <span style="display:inline-block;width:90px;height:7px;background:#0008;border:1px solid #c8a8ff66;border-radius:4px;vertical-align:middle"><s style="display:block;height:100%;text-decoration:none;background:#a07aff;width:' + Math.min(100, NC.res.length/resMax()*100) + '%"></s></span> ' + (res || '—') + '<br>Serviteurs ' + mine_.filter(n => !n.temp).length + '/' + cap.n + ' (niveau ' + lv + ') · dites Arise pour les relever';
   if (e.innerHTML !== h) e.innerHTML = h; }
 
 /* ===================== PROGRESSION PERMANENTE (niveau 1 à 50 par classe), ARBRES, SPÉCIALISATIONS, AMÉLIORATIONS DE PARTIE ===================== */
@@ -3123,7 +3126,7 @@ function levelUp(L){ banner('Niveau ' + L + ' !', (PALIERS[L] ? PALIERS[L] + ' �
   puff(me.x, me.y - 1, me.z, '#ffd86a', 50, 6, .8, 1.2, 3); flash(me.x, me.y, me.z, '#ffd86a', 6, .6); }
 function rpgKill(by, boss, type, champ){ if (!(isMe(by) || !room)) return; if (RPGP.killW !== W.w) { RPGP.killW = W.w; RPGP.killXp = 0; } const cap = 150 + 30*W.w; if (RPGP.killXp >= cap) return;
   const t = MT[type] || {hp:40}; let n = boss ? 150 : clamp(t.hp/12, 3, 25)*(champ ? 2.5 : 1); n = Math.min(n, cap - RPGP.killXp); RPGP.killXp += n; xpGain(n, 'kill'); }
-function rpgProgTick(){ const st = W.st; if (playing && !RPGP.wasPlaying) { RPGP.cheat = 0; RPGP.cheatMsg = 0; RPGP.run = {}; RPGP.rb = {}; RPGP.modsT = -1; } RPGP.wasPlaying = playing;
+function rpgProgTick(){ const st = W.st; if (playing && rpgCls() && typeof GP !== 'undefined') { const mx = (GP.arch === 'sage' ? 130 : GP.arch === 'guerre' ? 80 : 100) + Math.round(mod('mp')); if (me.maxMp !== mx) { me.maxMp = mx; me.mp = Math.min(me.mp, mx); } } if (playing && !RPGP.wasPlaying) { RPGP.cheat = 0; RPGP.cheatMsg = 0; RPGP.run = {}; RPGP.rb = {}; RPGP.modsT = -1; } RPGP.wasPlaying = playing;
   if (playing && RPGP.prevSt === 'fight' && st === 'break' && W.w > 0 && !me.dead) { xpGain(30 + 8*W.w + (W.w % 5 === 0 ? 120 : 0), 'vague'); waveReveal(); } RPGP.prevSt = st;
   if (playing && room && T > RPGP.pmT) { RPGP.pmT = T + 4; const M = myMods(), pm = {}; for (const k of ['gHp', 'gDmg', 'gSpd', 'gReg', 'gAoe', 'gFire', 'gIce', 'gCore', 'mHp', 'mDmg', 'mSpd', 'mLife', 'mElite', 'mBoom', 'ls', 'rx', 'cnt', 'drain', 'seis']) if (M[k]) pm[k] = r2(M[k]); room.emit('cast', {pm}).catch(()=>{}); }
   if (RPGP.xpPop && T > (RPGP.xpPopT || 0)) { RPGP.xpPopT = T + .9; qPop('+' + RPGP.xpPop + ' XP', '#ffd86a'); RPGP.xpPop = 0; } xpUI(); }
@@ -3137,12 +3140,17 @@ const RB = [
   ['celest', 'Soins puissants', 'Soins +20 %', 1, 3, {heal:.2}], ['celest', 'Boucliers solides', 'Divine Shield +30 %', 1, 3, {shield:.3}], ['celest', 'Orbes célestes', 'Orbes sacrés +25 %', 2, 2, {'dmg:ascend':.25}], ['celest', 'Ascension prolongée', 'Recharge d\'Ascension −20 %', 2, 2, {'cd:ascend':.2}], ['celest', 'Drain avide', 'Drain +30 %', 2, 3, {drain:.3}], ['celest', 'Grâce débordante', 'Grâce céleste ×2', 3, 1, {grace:1}], ['celest', 'Archange', 'Soins +40 %, ultime +40 %', 4, 1, {heal:.4, 'dmg:ascend':.4}],
   ['glad', 'Poings plus durs', 'Coups de poing +20 %', 1, 3, {basic:.2}], ['glad', 'Vampirisme', 'Vol de vie +4 %', 1, 3, {ls:.04}], ['glad', 'Onde élargie', 'Gladiator Leap : zone +25 %', 2, 2, {'zone:leap':.25}], ['glad', 'Berserker amélioré', 'Berserker dure +40 %', 2, 2, {'dur:berserk':.4}], ['glad', 'Rage sanglante', 'Rage +30 % de gain', 2, 2, {rage:.3}], ['glad', 'Peau de fer', '−15 % de dégâts subis', 3, 1, {def:.15}], ['glad', 'Champion de l\'arène', '+30 % de dégâts, vol de vie +5 %', 4, 1, {dmg:.3, ls:.05}],
   ['necro', 'Récolte abondante', 'Réserve d\'âmes +3', 1, 2, {res:3}], ['necro', 'Serviteurs puissants', 'Serviteurs +20 % de dégâts', 1, 3, {mDmg:.2}], ['necro', 'Chair épaisse', 'Serviteurs +25 % de vie', 2, 3, {mHp:.25}], ['necro', 'Explosion renforcée', 'Macabre Explosion +40 %', 2, 2, {'dmg:macabre':.4}], ['necro', 'Légion', '+1 serviteur et +2 capacité', 3, 1, {capN:1, capC:2}], ['necro', 'Roi éternel', 'Ultime +50 %, serviteurs +20 %', 4, 1, {'dmg:king':.5, mDmg:.2, mHp:.2}],
-  ['*', 'Vigueur', '−6 % de dégâts subis', 1, 3, {def:.06}], ['*', 'Concentration', 'Recharges −6 %', 1, 3, {cd:.06}], ['*', 'Puissance', '+8 % de dégâts', 1, 3, {dmg:.08}], ['*', 'Afflux', 'Régénération de mana +20 %', 1, 3, {mana:.2}], ['*', 'Pas léger', 'Vitesse +6 %', 2, 2, {spd:.06}]];
+  ['*', 'Vitalité', '+15 PV max', 1, 4, {hp:15}], ['*', 'Réservoir', '+15 mana max (Rage max pour le gladiateur)', 1, 3, {mp:15}], ['*', 'Puissance', '+8 % de dégâts', 1, 4, {dmg:.08}], ['*', 'Concentration', 'Recharges −6 %', 1, 3, {cd:.06}], ['*', 'Pas léger', 'Vitesse de déplacement +6 %', 1, 2, {spd:.06}],
+  ['*', 'Afflux', 'Régénération de mana +20 %', 1, 3, {mana:.2}], ['*', 'Vigueur', '−6 % de dégâts subis', 1, 3, {def:.06}], ['*', 'Régénération', '+1 PV par seconde', 2, 3, {hreg:1}], ['*', 'Robustesse', '+30 PV max', 2, 2, {hp:30}], ['*', 'Maîtrise', '+15 % de dégâts et recharges −8 %', 3, 1, {dmg:.15, cd:.08}], ['*', 'Héros de l\'arène', '+50 PV max et +15 % de dégâts', 4, 1, {hp:50, dmg:.15}]];
 RB.forEach(([c, n, d, r, max, m], i) => BLESS.push({id:'rb' + i, n, f:c === '*' ? 'Universelle' : CL[c].name, r, tags:['rpg'], d, cls:c, max, m}));
 const RAR = ['commune', 'rare', 'épique', 'légendaire'];
-function rbOk(b){ if (!b.cls) return !(b.tags || []).some(t => ['fire', 'ice', 'storm', 'spirit', 'shadow'].includes(t)) || !rpgCls(); if (b.cls !== '*' && b.cls !== me.cls) return false; if (b.r >= 3 && W.w < 4) return false; if (b.r >= 4 && W.w < 8) return false; return (RPGP.rb[b.id] || 0) < b.max; }
+function rbOk(b){ if (!b.cls) return !rpgCls(); if (b.cls !== '*' && b.cls !== me.cls) return false; if (b.r >= 3 && W.w < 4) return false; if (b.r >= 4 && W.w < 8) return false; return (RPGP.rb[b.id] || 0) < b.max; }
 function rbPick(b){ if (!b.cls) return; RPGP.rb[b.id] = (RPGP.rb[b.id] || 0) + 1; for (const [k, v] of Object.entries(b.m)) RPGP.run[k] = (RPGP.run[k] || 0) + v; RPGP.modsT = -1; if ((RPGP.rb[b.id] || 0) < b.max) BL.delete(b.id); }
 const rbStack = b => b.cls ? ' (' + ((RPGP.rb && RPGP.rb[b.id]) || 0) + '/' + b.max + ')' : '';
+/* ---- caractéristiques du personnage ---- */
+const rpgMaxHp = () => Math.round(100 + (rpgCls() ? mod('hp') : 0));
+function rpgStatsHTML(){ if (!rpgCls()) return ''; const p = v => (v > 0 ? '+' : '') + Math.round(v*100) + ' %';
+  return '<p class="rpgstats">PV max <b>' + rpgMaxHp() + '</b> · ' + (me.cls === 'glad' ? 'Rage' : 'Mana') + ' max <b>' + me.maxMp + '</b> · Dégâts <b>' + p(mod('dmg')) + '</b> · Recharges <b>' + p(-mod('cd')) + '</b> · Dégâts subis <b>' + p(-Math.min(.6, mod('def'))) + '</b> · Vitesse <b>' + p(mod('spd')) + '</b>' + (mod('hreg') ? ' · Régénération <b>+' + mod('hreg') + ' PV/s</b>' : '') + (mod('ls') ? ' · Vol de vie <b>' + p(mod('ls')) + '</b>' : '') + '</p>'; }
 /* ---- arbre : interface (touche K, menu, pause) ---- */
 let TREE_C = null;
 function rpgTreeOpen(){ const p0 = $('#tree'); if (p0 && p0.classList.contains('hidden')) TREE_C = null; const c = TREE_C || (playing ? me.cls : pickCls); if (!CL[c] || !CL[c].rpg) return false; TREE_C = c; const p = $('#tree'); if (!p) return false; p.innerHTML = rpgTreeHTML(c); p.classList.remove('hidden'); p.classList.add('rpgtree'); return true; }
@@ -3169,7 +3177,71 @@ addEventListener('click', rpgTreeClick, true);
 .rpgtree .rt-node,.rpgtree .rt-spec{text-align:left;border:1px solid #eadbb944;background:#1a140ecc;color:#eadbb9;border-radius:6px;padding:5px 8px;font:12px Georgia,serif;cursor:pointer;display:grid;grid-template-columns:1fr auto;gap:2px} .rpgtree .rt-node small,.rpgtree .rt-node i,.rpgtree .rt-spec i{grid-column:1/3;font-size:11px} .rpgtree .rt-node i,.rpgtree .rt-spec i{color:#c98a6a;font-style:italic;display:block}
 .rpgtree .rt-node.got{border-color:#ffd86a;background:#3a2a10cc} .rpgtree .rt-node.max{box-shadow:0 0 0 1px #ffd86a inset} .rpgtree .rt-node[aria-disabled]{opacity:.6} .rpgtree .rt-spec{grid-template-columns:1fr;border-color:#c8a8ff88;background:#1a1028cc} .rpgtree .rt-spec.on{border-color:#c8a8ff;background:#3a2060cc;color:#fff} .rpgtree .rt-spec[disabled]{opacity:.6;cursor:not-allowed}
 .rpgtree .rt-foot{display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-top:12px;font:12px Georgia,serif} .rpgtree .rt-foot h4{margin:6px 0 3px;font-family:Cinzel,serif;color:#ffd86a} .rpgtree .rt-foot ul{margin:0;padding-left:16px} .rpgtree .rt-spells li.lk{opacity:.5} .rpgtree .rt-foot button{border:1px solid #c9a24a;background:#2a1e10;color:#eadbb9;border-radius:6px;padding:4px 10px;cursor:pointer}
-#altar .card.r4{border-color:#ff9a2a;box-shadow:0 0 18px #ff9a2a88} #altar .card.r3{border-color:#c86aff;box-shadow:0 0 14px #c86aff66}`; document.head.appendChild(st); }
+#altar .rpgstats{font:13px Georgia,serif;color:#eadbb9;text-align:center;margin:8px 0 0} #altar .rpgstats b{color:#ffd86a} #altar .card.r4{border-color:#ff9a2a;box-shadow:0 0 18px #ff9a2a88} #altar .card.r3{border-color:#c86aff;box-shadow:0 0 14px #c86aff66}`; document.head.appendChild(st); }
+
+/* ===================== MODÈLE DU GLADIATEUR RUNIQUE (vu par les autres joueurs) =====================
+   Corps musclé, casque à crête, pagne de lanières, jambières, gros gantelets ; runes tatouées qui brillent (textures peintes en canvas). */
+const GLADTX = {};
+function gladTex(){ if (GLADTX.skin) return GLADTX;
+  /* peau : dégradé, pores, et carte d'émission avec les runes tatouées */
+  GLADTX.skin = canvasTex(256, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#b0785a'); gr.addColorStop(1, '#8a5a40'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 1800; i++) { g.fillStyle = `rgba(${60 + Math.random()*40},${30 + Math.random()*20},${20},${Math.random()*.12})`; g.fillRect(Math.random()*w, Math.random()*h, 2, 2); }
+    g.strokeStyle = 'rgba(60,30,20,.35)'; g.lineWidth = 3; for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(40 + i*30, 0); g.quadraticCurveTo(60 + i*30, h/2, 40 + i*30, h); g.stroke(); } });
+  GLADTX.rune = canvasTex(256, 256, (g, w, h) => { g.fillStyle = '#000'; g.fillRect(0, 0, w, h); g.strokeStyle = '#fff'; g.shadowColor = '#fff'; g.shadowBlur = 6; g.lineWidth = 5; g.lineCap = 'round';
+    const glyph = (x, y, s) => { g.beginPath(); g.moveTo(x, y - s); g.lineTo(x, y + s); g.moveTo(x - s*.7, y - s*.4); g.lineTo(x + s*.7, y + s*.2); g.moveTo(x + s*.6, y - s*.8); g.lineTo(x - s*.4, y + s*.1); g.stroke(); };
+    for (let i = 0; i < 4; i++) glyph(40 + i*58, 70, 18); for (let i = 0; i < 3; i++) glyph(70 + i*58, 170, 22); g.beginPath(); g.arc(w/2, 120, 34, 0, 6.28); g.stroke(); g.beginPath(); for (let i = 0; i < 6; i++) { const a = i/6*6.28; g.moveTo(w/2, 120); g.lineTo(w/2 + Math.cos(a)*34, 120 + Math.sin(a)*34); } g.stroke(); });
+  /* cuir clouté et métal martelé */
+  GLADTX.leather = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#4a2c1a'; g.fillRect(0, 0, w, h); for (let i = 0; i < 900; i++) { g.fillStyle = `rgba(0,0,0,${Math.random()*.25})`; g.fillRect(Math.random()*w, Math.random()*h, 3, 1); } g.fillStyle = '#c8a050'; for (let y = 10; y < h; y += 28) for (let x = 10; x < w; x += 28) { g.beginPath(); g.arc(x, y, 3.2, 0, 6.28); g.fill(); } });
+  GLADTX.metal = canvasTex(128, 128, (g, w, h) => { g.fillStyle = '#6a6a72'; g.fillRect(0, 0, w, h); for (let i = 0; i < 400; i++) { const v = 80 + Math.random()*90; g.fillStyle = `rgba(${v},${v},${v + 8},.35)`; g.beginPath(); g.arc(Math.random()*w, Math.random()*h, 2 + Math.random()*5, 0, 6.28); g.fill(); } g.strokeStyle = 'rgba(30,30,35,.6)'; g.lineWidth = 2; g.strokeRect(4, 4, w - 8, h - 8); });
+  return GLADTX; }
+function gladMesh(name){ const X = gladTex(), col = new THREE.Color(CL.glad.col), g = new THREE.Group(), body = new THREE.Group(); body.rotation.y = Math.PI; g.add(body);
+  const skin = new THREE.MeshStandardMaterial({map:X.skin, roughness:.6, metalness:0, emissive:new THREE.Color(0xff5a1a), emissiveMap:X.rune, emissiveIntensity:1.1});
+  const leath = new THREE.MeshStandardMaterial({map:X.leather, roughness:.8}), metal = new THREE.MeshStandardMaterial({map:X.metal, roughness:.35, metalness:.8, color:0xc8c0b0}), bronze = new THREE.MeshStandardMaterial({color:0xb8863a, roughness:.3, metalness:.9}), crest = new THREE.MeshStandardMaterial({color:0x9a1a14, roughness:.9});
+  const glow = new THREE.MeshBasicMaterial({color:0xff6a2a});
+  const M = (geo_, mt, x, y, z, p) => { const m = new THREE.Mesh(geo_, mt); m.position.set(x, y, z); m.castShadow = true; (p || body).add(m); return m; };
+  /* jambes */
+  const legs = [-1, 1].map(s => { const hip = new THREE.Group(); hip.position.set(s*.14, .95, 0); body.add(hip); M(new THREE.CylinderGeometry(.11, .085, .48, 10).translate(0, -.24, 0), skin, 0, 0, 0, hip);
+    const knee = new THREE.Group(); knee.position.y = -.48; hip.add(knee); M(new THREE.CylinderGeometry(.085, .07, .44, 10).translate(0, -.22, 0), skin, 0, 0, 0, knee); M(new THREE.CylinderGeometry(.095, .08, .34, 10, 1, true).translate(0, -.24, .01), metal, 0, 0, 0, knee); M(new THREE.SphereGeometry(.06, 8, 6), bronze, 0, -.02, .07, knee);
+    M(new THREE.BoxGeometry(.12, .06, .24), leath, 0, -.46, .05, knee); return {hip, knee}; });
+  /* pagne de lanières et ceinture */
+  M(new THREE.TorusGeometry(.2, .045, 8, 24).rotateX(Math.PI/2), bronze, 0, .98, 0); for (let i = 0; i < 12; i++) { const a = i/12*6.28; const st = M(new THREE.BoxGeometry(.07, .3, .02), leath, Math.sin(a)*.2, .82, Math.cos(a)*.2); st.rotation.y = a; st.rotation.x = -.08; }
+  /* torse en V, abdominaux, pectoraux */
+  const torso = M(new THREE.LatheGeometry([[.14, 0], [.2, .05], [.19, .2], [.23, .35], [.29, .48], [.31, .56], [.24, .62], [.1, .66]].map(([r, y]) => new THREE.Vector2(r, y)), 20), skin, 0, 1, 0); torso.scale.set(1, 1, .72);
+  for (const s of [-1, 1]) { M(new THREE.SphereGeometry(.12, 12, 8).scale(1.1, .7, .55), skin, s*.11, 1.47, .13); for (let k = 0; k < 3; k++) M(new THREE.SphereGeometry(.045, 8, 6).scale(1.2, .9, .5), skin, s*.05, 1.32 - k*.09, .15); }
+  /* épaulière de bronze et sangle en travers */
+  const pad = M(new THREE.SphereGeometry(.16, 14, 10, 0, 6.28, 0, 1.4), bronze, -.32, 1.6, 0); pad.rotation.z = .4; for (let i = 0; i < 3; i++) { const p2 = M(new THREE.SphereGeometry(.16 - i*.02, 12, 8, 0, 6.28, 1.2, .5), bronze, -.35 - i*.03, 1.52 - i*.08, 0); p2.rotation.z = .5; }
+  const strap = M(new THREE.BoxGeometry(.06, .75, .03), leath, .02, 1.33, .16); strap.rotation.z = .65;
+  /* tête : casque à crête et grille */
+  const head = new THREE.Group(); head.position.set(0, 1.78, 0); body.add(head); M(new THREE.SphereGeometry(.12, 14, 10), skin, 0, 0, 0, head);
+  M(new THREE.SphereGeometry(.15, 16, 10, 0, 6.28, 0, 1.75), metal, 0, .01, 0, head); M(new THREE.TorusGeometry(.17, .025, 6, 24).rotateX(Math.PI/2), bronze, 0, -.06, 0, head);
+  for (let i = 0; i < 5; i++) M(new THREE.BoxGeometry(.012, .13, .012), bronze, -.06 + i*.03, -.01, .14, head); for (let i = 0; i < 9; i++) { const f = M(new THREE.BoxGeometry(.03, .14 + Math.sin(i/8*Math.PI)*.08, .05), crest, 0, .2 + Math.sin(i/8*Math.PI)*.04, -.16 + i*.04, head); f.rotation.x = (i - 4)*.12; }
+  const eyes = [-1, 1].map(s => M(new THREE.SphereGeometry(.018, 6, 4), glow, s*.04, .01, .12, head));
+  /* bras et gros gantelets runiques */
+  const arm = s => { const sh = new THREE.Group(); sh.position.set(s*.33, 1.56, 0); body.add(sh); M(new THREE.CylinderGeometry(.085, .075, .34, 10).translate(0, -.17, 0), skin, 0, 0, 0, sh);
+    const el = new THREE.Group(); el.position.y = -.34; sh.add(el); M(new THREE.CylinderGeometry(.075, .07, .2, 10).translate(0, -.1, 0), skin, 0, 0, 0, el);
+    const gaunt = new THREE.Group(); gaunt.position.y = -.2; el.add(gaunt); M(new THREE.CylinderGeometry(.1, .085, .22, 10).translate(0, -.1, 0), metal, 0, 0, 0, gaunt);
+    const fist = M(new THREE.BoxGeometry(.17, .15, .17), metal, 0, -.29, 0, gaunt); for (let i = 0; i < 4; i++) M(new THREE.BoxGeometry(.03, .04, .045), bronze, -.06 + i*.04, -.33, .09, gaunt);
+    const ring = M(new THREE.TorusGeometry(.105, .016, 6, 20).rotateX(Math.PI/2), glow, 0, -.12, 0, gaunt); return {sh, el, gaunt, ring, fist}; };
+  const R = arm(-1), L = arm(1);
+  const aura = new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex, color:0xff3a1a, transparent:true, opacity:0, depthWrite:false, blending:THREE.AdditiveBlending})); aura.position.y = 1.1; aura.scale.setScalar(3); g.add(aura);
+  g.traverse(o => { if (o.isMesh) o.frustumCulled = false; });
+  const lb = label(name, '#' + col.getHexString()); lb.position.y = 2.25; g.add(lb); g.userData.lb = lb;
+  const S = {mv:0, cast:0, hit:0, die:0, lx:null, lz:null, hp:100, ph:0, side:1};
+  g.userData.cast = () => { S.cast = 1; S.side = -S.side; };
+  g.userData.upd = (dt, o) => { if (S.lx === null) { S.lx = g.position.x; S.lz = g.position.z; } const sp = Math.hypot(g.position.x - S.lx, g.position.z - S.lz)/Math.max(dt, 1e-3); S.lx = g.position.x; S.lz = g.position.z;
+    S.mv += (clamp(sp/5.5, 0, 1.6) - S.mv)*Math.min(1, dt*8); const mv = Math.min(1, S.mv); if (o.hp < S.hp - .5) S.hit = 1; S.hp = o.hp; S.cast = Math.max(0, S.cast - dt*3.5); S.hit = Math.max(0, S.hit - dt*4);
+    if (o.dead) { S.die = Math.min(1.6, S.die + dt); g.visible = S.die < 1.5; } else { S.die = 0; g.visible = true; } const dk = Math.min(1, S.die/1.1);
+    S.ph += dt*(7 + S.mv*4)*Math.min(1, S.mv*3); const st = Math.sin(S.ph), c = S.cast, pu = Math.sin(c*Math.PI), h = S.hit;
+    legs.forEach((l, i) => { const p = i ? -st : st; l.hip.rotation.x = p*.6*mv; l.knee.rotation.x = Math.max(0, -p)*.8*mv + .05; });
+    body.position.y = Math.abs(Math.cos(S.ph))*.05*mv - dk*.3; body.rotation.x = -mv*.1 + h*.25 - dk*1.4;
+    /* garde haute, coups de poing alternés */
+    const punchR = S.side > 0 ? pu : 0, punchL = S.side < 0 ? pu : 0;
+    R.sh.rotation.set(-.4 - punchR*1.1 + st*.15*mv, 0, .18 - punchR*.15); R.el.rotation.x = -1.8 + punchR*1.75; L.sh.rotation.set(-.4 - punchL*1.1 - st*.15*mv, 0, -.18 + punchL*.15); L.el.rotation.x = -1.8 + punchL*1.75;
+    head.rotation.set(h*.3, Math.sin(T*.6)*.15*(1 - mv), 0);
+    const B = (() => { for (const [p, ot] of others) if (ot.g === g) return buffOf(p); return {}; })(), bz = B.berserk > T, ap = B.apex > T, bl = B.blood > T;
+    const ec = ap ? 0xffc040 : bz ? 0xff1a0a : bl ? 0xc0102a : 0xff5a1a; skin.emissive.setHex(ec); skin.emissiveIntensity = .9 + Math.sin(T*3)*.25 + c*1.5 + (bz || ap ? 1 : 0); glow.color.setHex(ec); eyes.forEach(e => e.visible = !o.dead);
+    aura.material.color.setHex(ec); aura.material.opacity = (bz || ap ? .35 : bl ? .2 : 0) + Math.sin(T*6)*.05*(bz || ap ? 1 : 0); };
+  scene.add(g); return g; }
 
 /* ===================== ARÈNE VIVANTE : biomes, transformations, dangers, destruction ===================== */
 /* Le biome se déduit de la vague (identique chez tous les joueurs, sans message réseau) ; la transformation dure 12 s pendant la pause entre deux vagues.
@@ -3394,7 +3466,7 @@ TUFTS.material.onBeforeCompile = sh => { sh.uniforms.uT = WIND; sh.vertexShader 
 function label(text, col){ const t = canvasTex(256, 64, (g) => { g.font = 'bold 30px Cinzel, Georgia, serif'; g.textAlign = 'center'; g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(text, 128, 42); g.fillStyle = col; g.fillText(text, 128, 42); }); const s = new THREE.Sprite(new THREE.SpriteMaterial({map:t, depthWrite:false, transparent:true})); s.scale.set(3,.75,1); return s; }
 /* ---------------- LE MAGE (vu par les autres joueurs) : sculpté, animé, propre à chaque école ---------------- */
 const WZ_STYLE = {fire:{hat:1, trim:0xc9a24a, pad:0x6a1a0c}, ice:{hat:1, trim:0xc8d8e8, pad:0x2a4a6a}, storm:{hat:1, trim:0xd8b25a, pad:0x3a3a52}, spirit:{hat:0, trim:0xe0c8ff, pad:0x4a2a6a}, shadow:{hat:0, trim:0x7a8a70, pad:0x16201a}};
-function wizardMesh(cls, name){
+function wizardMesh(cls, name){ if (cls === 'glad' && typeof gladMesh === 'function') return gladMesh(name);
   const C = CL[cls] ? cls : 'fire', st = WZ_STYLE[C], col = new THREE.Color(CL[C].col), g = new THREE.Group(), body = new THREE.Group(); body.rotation.y = Math.PI; g.add(body);
   const U = {uT:SPU.uT, uMv:{value:0}};
   /* robe : plis, ourlet qui flotte et traîne en mouvement (vertex shader) */
@@ -4881,7 +4953,7 @@ function killMon(m){
 const DYING = [];
 function deathFx(m){ puff(m.x, (m.gy || 0) + 1, m.z, m.type === 0 ? '#ff7a2a' : '#b0a8ff', MT[m.type].boss ? 80 : 20, 8, 1.2, .8, 2); sfx('hit', .4); if (m.g.userData.bar) m.g.userData.bar.visible = false; DYING.push({g:m.g, t:0, side:Math.random() < .5 ? -1 : 1, x:m.x, z:m.z, type:m.type}); }
 function addDrop(t, x, z){ if (drops.size > 24) return; const id = W.did++; drops.set(id, {id, t, x, z, age:0, g:dropMesh(t)}); }
-function heal(n){ if (n > 1 && W.st === 'fight') WV.healed = true; me.hp = Math.min(100, me.hp + n); puff(me.x, me.y - 1.7 + 1, me.z, '#7dff9c', 8, 3, .5, .6, 2); }
+function heal(n){ if (n > 1 && W.st === 'fight') WV.healed = true; me.hp = Math.min(rpgMaxHp(), me.hp + n); puff(me.x, me.y - 1.7 + 1, me.z, '#7dff9c', 8, 3, .5, .6, 2); }
 let lastHurtBy = null;
 function takeDamage(d, by){ gpHurtTrack(d, by);
   if (!me.dead && playing) { shake = Math.min(1, shake + d/25); GRADE.uniforms.uHurt.value = Math.min(.8, GRADE.uniforms.uHurt.value + d/30); }
@@ -4897,7 +4969,7 @@ function die(){
   if (mode === 'pvp' && known.length > 1) { if (isHost) addDrop('tome', me.x, me.z); else if (room) room.emit('pick', {drop:[r2(me.x), r2(me.z)]}).catch(()=>{}); }
   lastHurtBy = null;
 }
-function respawn(){ me.dead = false; me.hp = 100; me.mp = me.maxMp; const a = Math.random()*Math.PI*2, r = mode === 'pvp' ? 30 : 6; me.x = Math.cos(a)*r; me.z = Math.sin(a)*r; me.y = groundH(me.x, me.z) + 1.7; me.vy = 0; me.onG = true; me.yaw = Math.atan2(me.x, me.z); $('#dead').classList.add('hidden'); }
+function respawn(){ me.dead = false; me.hp = rpgMaxHp(); me.mp = me.maxMp; const a = Math.random()*Math.PI*2, r = mode === 'pvp' ? 30 : 6; me.x = Math.cos(a)*r; me.z = Math.sin(a)*r; me.y = groundH(me.x, me.z) + 1.7; me.vy = 0; me.onG = true; me.yaw = Math.atan2(me.x, me.z); $('#dead').classList.add('hidden'); }
 function grant(t){
   if (t === 'hp') { if (hasPact('faim')) { toast('Pacte de la faim : la potion se dissipe'); return; } heal(45); toast('Potion de soin'); return; }
   if (t === 'mp') { me.mp = Math.min(me.maxMp, me.mp + 60); toast('Cristal de mana'); return; }
@@ -5638,7 +5710,7 @@ function updHud(dt){
   if (W.st === 'over' && lastSt !== 'over') banner('La horde a vaincu', 'Vague ' + W.w + ' atteinte · nouvelle partie dans un instant');
   if (W.st === 'break' && lastSt === 'over') { lastWave = 0; if (me.dead) respawn(); }
   lastSt = W.st;
-  $('#hpb').style.width = me.hp + '%'; $('#hpt').textContent = Math.ceil(me.hp) + ' PV';
+  $('#hpb').style.width = (me.hp/rpgMaxHp()*100) + '%'; $('#hpt').textContent = Math.ceil(me.hp) + (rpgMaxHp() !== 100 ? ' / ' + rpgMaxHp() : '') + ' PV';
   $('#buff').textContent = me.pwT > 0 ? 'Rune de puissance · dégâts ×1,5 · ' + Math.ceil(me.pwT) + ' s' : '';
   $('#mpb').style.width = (me.mp/me.maxMp*100) + '%'; $('#mpt').textContent = Math.floor(me.mp) + ' / ' + me.maxMp + (me.cls === 'glad' ? ' rage' : ' mana');
   if (me.dead && $('#rt')) $('#rt').textContent = Math.ceil(me.rT);
@@ -5781,7 +5853,7 @@ function loop(){
         const wh = walkH(me.x, me.z), gh = wh < 50 ? wh : feet; me.vy -= 20*dt; let ny = rpgVert(me.y + me.vy*dt, gh, dt);
         if (me.onG && me.vy <= 0 && feet - gh < .5) ny = gh + 1.7;
         if (ny <= gh + 1.7) { ny = gh + 1.7; me.vy = 0; me.onG = true; } else me.onG = false; me.y = ny; }
-      me.mp = Math.min(me.maxMp, me.mp + 1.5*dt*rpgRegen()); if (me.pwT > 0) me.pwT -= dt; /* régénération de vie très lente, seulement après 6 s sans dégâts */ if (!me.dead && T - (me.hurtT ?? -99) > 6) me.hp = Math.min(100, me.hp + .2*dt*(hasB('sang') ? 3 : 1)); if (!me.dead && T - (me.hurtT ?? -99) > 6) me.hp = Math.min(100, me.hp + .2*dt*(hasB('sang') ? 3 : 1));
+      me.mp = Math.min(me.maxMp, me.mp + 1.5*dt*rpgRegen()); if (me.pwT > 0) me.pwT -= dt; /* régénération de vie très lente, seulement après 6 s sans dégâts */ if (!me.dead && T - (me.hurtT ?? -99) > 6) me.hp = Math.min(rpgMaxHp(), me.hp + .2*dt*(hasB('sang') ? 3 : 1)); if (!me.dead && T - (me.hurtT ?? -99) > 6) me.hp = Math.min(rpgMaxHp(), me.hp + .2*dt*(hasB('sang') ? 3 : 1));
       for (const [id, d] of drops) if (Math.hypot(d.x-me.x, d.z-me.z) < 1.8) { if (isHost) takeDrop(id, me.peer); else if (room && (pending[id] || 0) < now()) { pending[id] = now() + 1; room.emit('pick', {id}).catch(()=>{}); } }
     }
     camera.position.set(me.x, me.dead ? me.y + 1.5 : me.y + (me.dead ? 0 : Math.sin(T*9)*.03*(keys.KeyW ? 1 : 0)), me.z);

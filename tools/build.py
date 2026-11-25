@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Construit index.html : tools/base.html (le jeu Incantatio Arena) + les modules src/*.js + les points d'accroche ci-dessous."""
 import glob, os, sys
-VERSION = 'v0.4 · 25/11'
+VERSION = 'v0.5 · 25/11'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 s = open(os.path.join(ROOT, 'tools/base.html')).read(); MISS = []; N = [0]
 def R(a, b, n=1):
@@ -66,6 +66,11 @@ R("function comKill(by, sn, boss, type, champ){", "function comKill(by, sn, boss
 R("function chatCmd(v){", "function chatCmd(v){ if (playing && !/^\\/(aide|help|\\?|commandes)/i.test(v)) RPGP.cheat = 1;")
 R("function objOK(){ if (WV.objSt) return;", "function objOK(){ if (WV.objSt) return; xpGain(50, 'objectif');")
 R("function evtRecv(e){", "function evtRecv(e){ xpGain(20, 'événement');")
+R("Math.min(100, me.hp", "Math.min(rpgMaxHp(), me.hp", 3)
+R("me.hp = 100", "me.hp = rpgMaxHp()", 2)
+R("$('#hpb').style.width = me.hp + '%'; $('#hpt').textContent = Math.ceil(me.hp) + ' PV';", "$('#hpb').style.width = (me.hp/rpgMaxHp()*100) + '%'; $('#hpt').textContent = Math.ceil(me.hp) + (rpgMaxHp() !== 100 ? ' / ' + rpgMaxHp() : '') + ' PV';")
+R("${rbStack(b)}</p></div>`).join('') + '</div><small class=", "${rbStack(b)}</p></div>`).join('') + '</div>' + rpgStatsHTML() + '<small class=")
+R("function wizardMesh(cls, name){", "function wizardMesh(cls, name){ if (cls === 'glad' && typeof gladMesh === 'function') return gladMesh(name);")
 R("<title>Incantatio Arena</title>", "<title>Incantatio RPG</title>")
 R("    <h1>Incantatio Arena</h1>", "    <h1>Incantatio RPG</h1>")
 R("Choisissez votre école de magie, entrez dans l'arène et <b>criez vos incantations dans le micro</b> : vos coéquipiers vous entendent pour de vrai. Farmez monstres et boss pour récupérer des parchemins et débloquer de nouveaux sorts, en coop ou chacun pour soi.", "Choisissez l'une des cinq classes, entrez dans l'arène et <b>criez vos formules dans le micro</b> (en anglais) : le clic gauche lance votre attaque de base, la voix lance vos sorts. En coop ou chacun pour soi.")

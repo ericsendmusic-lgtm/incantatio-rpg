@@ -21,14 +21,14 @@ const buffOf = p => RPG.buff[pk_(p)] || (RPG.buff[pk_(p)] = {});
 const bOn = (p, k) => (buffOf(p)[k] || 0) > T;
 /* ---- garde-fous avant le lancer (avant de payer le mana) ---- */
 function rpgBlock(id){ const sp = spellOf(id); if (!sp) return false;
-  if (sp.act === 'berserk' && me.hp >= 30) { toast('Berserker : seulement sous 30 % de vie'); return true; }
+  if (sp.act === 'berserk' && me.hp >= .3*rpgMaxHp()) { toast('Berserker : seulement sous 30 % de vie'); return true; }
   if (sp.act === 'leap' && RPG.leap) return true; return false; }
 /* ---- vitesse, régénération, défense ---- */
 function rpgSpeed(){ let k = 1 + mod('spd'); if (bOn(me.peer, 'apex')) k *= 1.3; if (bOn(me.peer, 'berserk')) k *= 1.1; return k; }
 function rpgRegen(){ return (me.cls === 'glad' ? .35 : 1)*(1 + mod('mana')); }
 function rpgDefend(d){ if (d <= 0) return d; d *= 1 - Math.min(.6, mod('def')); if (me.cls === 'glad') me.mp = Math.min(me.maxMp, me.mp + d*.6*(1 + mod('rage')));
   if (RPG.shield > 0 && T < RPG.shieldT) { const a = Math.min(RPG.shield, d); RPG.shield -= a; d -= a; if (a > 0) { qPop('Bouclier divin', '#ffe9a8'); puff(me.x, me.y - .6, me.z, '#ffe9a8', 8, 3, .5, .5, 1); } }
-  if (RPG.second > T && me.hp - d <= 0) { RPG.second = 0; d = Math.max(0, me.hp - 1); fx.push({delay:.05, run:() => { if (!me.dead) { me.hp = 50; banner('Second souffle !', 'La lumière vous relève'); puff(me.x, me.y - 1, me.z, '#ffe9a8', 40, 5, 1, 1, 3); } }}); }
+  if (RPG.second > T && me.hp - d <= 0) { RPG.second = 0; d = Math.max(0, me.hp - 1); fx.push({delay:.05, run:() => { if (!me.dead) { me.hp = rpgMaxHp()*.5; banner('Second souffle !', 'La lumière vous relève'); puff(me.x, me.y - 1, me.z, '#ffe9a8', 40, 5, 1, 1, 3); } }}); }
   return d; }
 /* ---- attaque de base ---- */
 function rpgBasic2(data){ const c = me.cls;
@@ -113,13 +113,13 @@ function fpTick(dt){ const glad = playing && me.cls === 'glad';
 /* ---- interface de classe (Rage, Grâce, Second souffle, bouclier) ---- */
 function classUI(){ let e = $('#clsui'); if (!e) { e = document.createElement('div'); e.id = 'clsui'; e.style.cssText = 'position:fixed;left:36%;transform:translateX(-50%);bottom:96px;text-align:center;font:14px Georgia,serif;color:#ffe9c8;z-index:12;pointer-events:none;text-shadow:0 1px 3px #000'; document.body.appendChild(e); }
   if (!playing) { e.textContent = ''; return; } const parts = [], B = buffOf(me.peer);
-  if (me.cls === 'glad') { for (const [k, n] of [['blood', 'Rune de sang'], ['berserk', 'Berserker'], ['apex', 'Apogée']]) if (B[k] > T) parts.push(n + ' ' + Math.ceil(B[k] - T) + ' s'); if (me.hp < 30 && !(B.berserk > T) && (cds['glad:3'] || 0) < now()) parts.push('<b style="color:#ff5a3a">Berserker disponible !</b>'); }
+  if (me.cls === 'glad') { for (const [k, n] of [['blood', 'Rune de sang'], ['berserk', 'Berserker'], ['apex', 'Apogée']]) if (B[k] > T) parts.push(n + ' ' + Math.ceil(B[k] - T) + ' s'); if (me.hp < .3*rpgMaxHp() && !(B.berserk > T) && (cds['glad:3'] || 0) < now()) parts.push('<b style="color:#ff5a3a">Berserker disponible !</b>'); }
   if (me.cls === 'celest') { parts.push('Grâce céleste ' + Math.floor(RPG.grace) + ' %' + (RPG.grace >= 100 ? ' : prochain sort renforcé' : '')); if (RPG.second > T) parts.push('Second souffle ' + Math.ceil(RPG.second - T) + ' s'); if (RPG.fly > T) parts.push('<b>Ascension ' + Math.ceil(RPG.fly - T) + ' s</b>'); }
   if (RPG.shield > 0 && RPG.shieldT > T) parts.push('Bouclier divin ' + Math.ceil(RPG.shield));
   const h = parts.join('<br>'); if (e.innerHTML !== h) e.innerHTML = h;
   if (me.cls === 'glad') { const b = $('#mpb'); if (b) b.style.background = 'linear-gradient(#ff9a6a,#c8281a 45%,#4a0a06)'; } else { const b = $('#mpb'); if (b && b.style.background) b.style.background = ''; } }
 /* ---- tick ---- */
-function rpgTick2(dt){ if (typeof rpgProgTick === 'function') rpgProgTick(); fpTick(dt); circlesTick(dt); classUI(); if (typeof minTick === 'function') minTick(dt);
+function rpgTick2(dt){ if (playing && !me.dead && rpgCls() && mod('hreg')) me.hp = Math.min(rpgMaxHp(), me.hp + mod('hreg')*dt); if (typeof rpgProgTick === 'function') rpgProgTick(); fpTick(dt); circlesTick(dt); classUI(); if (typeof minTick === 'function') minTick(dt);
   if (playing && me.cls === 'celest' && RPG.hold && !me.dead && RPG.fly <= T && T > RPG.beamT) { RPG.beamT = T + .25; const ally = aimAlly(25); if (ally) RPG.beamTg = 'p:' + ally; else { const o = camera.position, ids = chainTargets(o, aimDir(), 1); RPG.beamTg = typeof ids[0] === 'number' ? ids[0] : null; }
     if (RPG.beamTg != null) castOut('basic'); else { heal(.6); graceAdd(.3); puff(me.x, me.y - .5, me.z, '#ffe9a8', 1, 1, .3, .6, 2); } }
   if (playing && me.cls === 'celest' && RPG.hold && RPG.fly > T && (cds.basic || 0) < now()) { castOut('basic'); }
