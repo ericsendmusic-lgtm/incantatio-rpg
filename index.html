@@ -2079,7 +2079,7 @@ function wavesQuality(id, Q){ if (hasPact('murmure') && !Q.perfect) Q.q *= .6; }
 function riseTarget(){ if (me.dead || !room) return null; for (const [p, o] of others) if (o.dead && Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) < 3.5) return p; return null; }
 const riseNear = () => !!riseTarget();
 const GAME_VER = 'v2.5.2 · 25/11 golem';
-{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.9 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
+{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.10 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
 function riseStart(){ const p = riseTarget(); if (!p) return false; WV.rise = {peer:p, t:3}; toast('Résurrection : restez près de son âme 3 s'); return true; }
 function riseVoice(n){ if (/guard/.test(n)) return false; if (!/\b(rise|rice|rize|raise|rais)\b/.test(n)) return false; return riseStart(); }
 function riseTick(dt){ const R = WV.rise; if (!R) return; const o = others.get(R.peer); if (!o || !o.dead || me.dead || Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) > 3.8) { WV.rise = null; toast('Résurrection interrompue'); return; }
@@ -2715,7 +2715,7 @@ function rpgBasic(data){ const c = me.cls; if (c === 'elem') { data.bel = RPG.la
 /* ---- lancer : dispatch des comportements ---- */
 function rpgCast(data, caster, mine, sp, el, col){ const o = data.o, rk = fin(data.rk) ? data.rk : 1, pot = rk >= 2 ? 1.25 : 1, big = (rk >= 3 ? 1.25 : 1)*(fin(data.zk) ? clamp(data.zk, .5, 3) : 1), t = Array.isArray(data.t) && data.t.every(fin) ? data.t : [o[0], o[2]], dmg = sp.dmg*pot*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1)*(fin(data.q) ? clamp(data.q, .5, 1.3) : 1);
   if (typeof synElem === 'function' && sp.el) synElem(t, sp.el, caster);
-  if (sp.act === 'dragon') castDragon(o, data.d, sp, dmg, big, caster, data.sd | 0);
+  if (sp.act === 'dragon') { const u = modOf(caster, 'u_dragon'); castDragon(o, data.d, sp, dmg*(u ? 1.4 : 1), big, caster, data.sd | 0); if (u) fx.push({delay:.5, run:() => castDragon(o, data.d, sp, dmg*.7, big, caster, (data.sd | 0) + 7)}); }
   else if (sp.act === 'tri') { const P = Array.isArray(data.pts) && data.pts.length === 3 && data.pts.every(p => Array.isArray(p) && p.every(fin)) ? data.pts : null; if (P) castTri(P, dmg, big, caster); }
   else if (sp.act === 'prison') castPrison(t, sp, dmg, big, caster);
   else if (sp.act === 'tempest') castTempest(t, sp, dmg, big, caster, data.sd | 0);
@@ -2865,7 +2865,7 @@ function rpgBlock(id){ const sp = spellOf(id); if (!sp) return false; if (typeof
 /* ---- vitesse, régénération, défense ---- */
 function rpgSpeed(){ let k = 1 + mod('spd'); if (bOn(me.peer, 'apex')) k *= 1.3; if (bOn(me.peer, 'berserk')) k *= 1.1; return k; }
 function rpgRegen(){ return (me.cls === 'glad' ? .35 : 1)*(1 + mod('mana')); }
-function rpgDefend(d){ if (d <= 0) return d; d *= 1 - Math.min(.6, mod('def')); if (RPG.fly > T) d *= .3; if (typeof ultAdd === 'function') ultAdd(d*.4); if (me.cls === 'glad') me.mp = Math.min(me.maxMp, me.mp + d*.6*(1 + mod('rage')));
+function rpgDefend(d){ if (d <= 0) return d; if (typeof expDmg === 'function') d *= expDmg(); d *= 1 - Math.min(.6, mod('def')); if (RPG.fly > T) d *= .3; if (typeof ultAdd === 'function') ultAdd(d*.4); if (me.cls === 'glad') me.mp = Math.min(me.maxMp, me.mp + d*.6*(1 + mod('rage')));
   if (RPG.shield > 0 && T < RPG.shieldT) { const a = Math.min(RPG.shield, d); RPG.shield -= a; d -= a; if (a > 0) { qPop('Bouclier divin', '#ffe9a8'); puff(me.x, me.y - .6, me.z, '#ffe9a8', 8, 3, .5, .5, 1); } }
   if (RPG.second > T && me.hp - d <= 0) { RPG.second = 0; d = Math.max(0, me.hp - 1); fx.push({delay:.05, run:() => { if (!me.dead) { me.hp = rpgMaxHp()*.5; banner('Second souffle !', 'La lumière vous relève'); puff(me.x, me.y - 1, me.z, '#ffe9a8', 40, 5, 1, 1, 3); } }}); }
   return d; }
@@ -2913,8 +2913,8 @@ function rpgCast2(data, caster, mine, sp, el, col, t, dmg, pot, big){ const du =
   else if (sp.act === 'drain') { const id = Array.isArray(data.ids) && typeof data.ids[0] === 'number' ? data.ids[0] : null; if (id == null) { if (mine) toast('Life Drain : visez un ennemi'); return; }
     rpgZone({dur:4, every:.5, upd:() => { const m = mons.get(id); if (m && Math.random() < .5) beamFx(isMe(caster) ? staffTipPos() : rpgCasterPos(caster, o), new THREE.Vector3(m.x, (m.gy || 0) + MT[m.type].h*.6, m.z), '#9aff7a', '#ff4a6a'); },
       tick:() => { const m = mons.get(id); if (!m) return; hurt(m, dmg, {el:'spirit', sn:sp.n, rx:1}, 0, 0, caster); const h = dmg*.6*(1 + modOf(caster, 'heal')); if (isMe(caster)) { heal(h); graceAdd(h); } else W.hits.push(['heal', caster, Math.round(h)]); }}); }
-  else if (sp.act === 'ascend') { B.ascend = T + 10; if (mine) { RPG.fly = T + 10; banner('Ascension !', 'Clic gauche : orbes sacrés'); } runeBurst(o[0], o[2], '#fff2b0');
-    fx.push({delay:10, run:() => { const p = rpgCasterPos(caster, o); circleFx(p.x, p.z, 6, 1.2); if (Math.hypot(me.x - p.x, me.z - p.z) < 7 && !me.dead) heal(20); }}); }
+  else if (sp.act === 'ascend') { const fd = modOf(caster, 'u_asc') ? 15 : 10; B.ascend = T + fd; if (mine) { RPG.fly = T + fd; banner('Ascension !', 'Clic gauche : orbes sacrés'); } runeBurst(o[0], o[2], '#fff2b0');
+    fx.push({delay:fd, run:() => { const p = rpgCasterPos(caster, o); circleFx(p.x, p.z, 6, 1.2); if (Math.hypot(me.x - p.x, me.z - p.z) < 7 && !me.dead) heal(20); }}); }
   else if (typeof necroCast === 'function') necroCast(data, caster, mine, sp, t, dmg, pot, big); }
 /* ---- soins des cercles de vie (chaque joueur se soigne lui-même) ---- */
 function circlesTick(dt){ const L = RPG.circles || []; for (let i = L.length - 1; i >= 0; i--) { const c = L[i]; if (T > c.t0 + c.dur) { L.splice(i, 1); continue; } synHealSummons(c.x, c.z, c.R, 6*c.pot*dt); if (!me.dead && Math.hypot(me.x - c.x, me.z - c.z) < c.R) { const h = 6*c.pot*dt; heal(h); if (c.mine) graceAdd(h); } } }
@@ -3023,7 +3023,7 @@ function minHitPlayer(peer, dmg){ if (typeof peer === 'string' && peer.startsWit
 /* ---- sorts ---- */
 function necroCast(data, caster, mine, sp, t, dmg, pot, big){ const o = data.o, B = buffOf(caster);
   if (sp.act === 'harvest') { const R = sp.r*big; ringFx(o[0], o[2], R, '#a07aff', .6, 'shadow', 1); if (mine) { let n = 0; for (const s of [...NC.orbs.values()]) if (Math.hypot(s.x - me.x, s.z - me.z) < R) { soulTake(s); n++; } qPop(n ? n + ' âme' + (n > 1 ? 's' : '') + ' récoltée' + (n > 1 ? 's' : '') : 'Aucune âme', '#c8a8ff'); } }
-  else if (sp.act === 'arise') { ringFx(o[0], o[2], 4, '#7dff9c', .6, 'shadow'); sndAt('whisper', o[0], o[2], 1.2); if (isHost && Array.isArray(data.tys)) { const L = data.tys.filter(x => Array.isArray(x) && MT[x[0]] && SOUL[x[0]]).slice(0, 12); L.forEach((x, i) => { const a = i/Math.max(1, L.length)*6.28; const n = minSpawn(pk_(caster), x[0], o[0] + Math.cos(a)*2.5, o[2] + Math.sin(a)*2.5); if (x[1] === 1) n.elite = 1; });
+  else if (sp.act === 'arise') { ringFx(o[0], o[2], 4, '#7dff9c', .6, 'shadow'); sndAt('whisper', o[0], o[2], 1.2); if (isHost && Array.isArray(data.tys)) { const L = data.tys.filter(x => Array.isArray(x) && MT[x[0]] && SOUL[x[0]]).slice(0, 12); L.forEach((x, i) => { const a = i/Math.max(1, L.length)*6.28; const n = minSpawn(pk_(caster), x[0], o[0] + Math.cos(a)*2.5, o[2] + Math.sin(a)*2.5); if (x[1] === 1) n.elite = 1; }); if (modOf(caster, 'u_bones')) for (let i = 0; i < Math.floor(L.length/2); i++) { const a = Math.random()*6.28; minSpawn(pk_(caster), 1, o[0] + Math.cos(a)*3, o[2] + Math.sin(a)*3, 1); }
       /* l'armée ne dépasse pas la limite du niveau : les plus anciens serviteurs retombent en poussière ; 2 créatures puissantes au plus */
       const cap = necroCap(necroLvlOf(caster), caster), arr = minsOf(caster).filter(n => !n.temp).sort((a, b) => a.id - b.id); while (arr.length > cap.n) minDie(arr.shift()); const big = arr.filter(n => (SOUL[n.ty] || {}).c >= 6); while (big.length > 2) minDie(big.shift()); } }
   else if (sp.act === 'macabre') { if (isHost) for (const n of minsOf(caster)) { const R = sp.r*big, d = dmg + n.hp*.3; W.hits.push(['nboom', r2(n.x), r2(n.z), r2(R)]); boomFx(n.x, n.z, R); for (const m of [...mons.values()]) if (Math.hypot(m.x - n.x, m.z - n.z) < R + MT[m.type].r) hurt(m, d, {el:'shadow', sn:sp.n, push:2}, 0, 0, caster); NC.mins.delete(n.id); W.hits.push(['ndie', n.id]); minDieFx(n); } }
@@ -3039,7 +3039,7 @@ function minPack(){ return [...NC.mins.values()].map(n => [n.id, n.ty, n.owner, 
 function minRecv(L){ if (!Array.isArray(L)) return; const seen = new Set(); for (const t of L) { if (!Array.isArray(t) || !fin(t[0]) || !MT[t[1]]) continue; const [id, ty, owner, x, z, hp, mx, fl, yaw, at] = t; seen.add(id); let n = NC.mins.get(id); if (!n) { n = {id, ty, x, z}; NC.mins.set(id, n); }
     Object.assign(n, {owner:String(owner), tx:x, tz:z, hp, max:mx, fl, tyaw:yaw}); if (at && !(n.a > 0)) n.a = .4; } for (const [id, n] of NC.mins) if (!seen.has(id)) { if (n.g) scene.remove(n.g); NC.mins.delete(id); } }
 function rpgPreApply(data, caster, mine){ if (fin(data.sc)) { soulGone(data.sc); return true; } if (typeof data.cg === 'string' && CGRAND[data.cg]) { if (!mine) rpgGrandApply(data, caster, mine); return true; } if (data.pm && typeof data.pm === 'object') { const o = others.get(caster); if (o && !mine) o.pm = data.pm; return true; } if (fin(data.nlv) && !mine) { const o = others.get(caster); if (o) o.nlv = clamp(data.nlv, 1, 50); return true; } return false; }
-function rpgHit2(h){ const t = h[0]; if (typeof contentHit === 'function') contentHit(h);
+function rpgHit2(h){ const t = h[0]; if (typeof contentHit === 'function') contentHit(h); if (t === 'loot' && fin(h[1]) && typeof lootOrb === 'function') lootOrb(h[1], h[2], h[3], clamp(h[4] | 0, 1, 4));
   if (t === 'soul' && fin(h[1])) soulOrb(h[1], h[2], h[3], h[4], h[5]); else if (t === 'nrise' && fin(h[1])) minRiseFx(h[1], h[2]); else if (t === 'ndie') { const n = NC.mins.get(h[1]); if (n) minDieFx(n); }
   else if (t === 'nhit') { const n = NC.mins.get(h[1]); if (n && fin(h[2])) { n.a = .4; minHitFx(n, h[2], h[3], h[4] === 1); } } else if (t === 'nboom' && fin(h[1])) boomFx(h[1], h[2], h[3]); }
 /* ---- effets et rendu ---- */
@@ -3121,7 +3121,7 @@ function progReset(c){ const P = progOf(c); if (playing) { toast('Réinitialisat
 function progModsOf(c){ const P = progOf(c), M = {}, add = m => { for (const [k, v] of Object.entries(m)) M[k] = (M[k] || 0) + v; };
   (CTREES[c] || []).forEach((B, b) => B.nodes.forEach((nd, i) => { const r = P.nodes[nodeId(b, i)] || 0; for (let j = 0; j < r; j++) add(nd.m); }));
   P.specs.forEach(b => CTREES[c] && CTREES[c][b] && add(CTREES[c][b].spec.m)); if (P.lv >= 3 && PASSIVE[c]) add(PASSIVE[c].m); if (P.lv >= 10) add({dmg:.1}); const u = ULT(c); if (P.lv >= 20 && u) add({['dmg:' + u]:.4, ['cd:' + u]:.15}); if (P.lv >= 30 && MECH[c]) add(MECH[c].m); if (P.lv >= 40) add({dmg:.15, def:.1}); if (P.lv >= 50 && u) add({dmg:.1, ['cd:' + u]:.3});
-  for (const [k, v] of Object.entries(RPGP.run)) M[k] = (M[k] || 0) + v; return M; }
+  for (const [k, v] of Object.entries(RPGP.run)) M[k] = (M[k] || 0) + v; if (typeof invMods === 'function' && c === me.cls) for (const [k, v] of Object.entries(invMods())) M[k] = (M[k] || 0) + v; return M; }
 function myMods(){ if (RPGP.modsT !== T || !RPGP.mods) { RPGP.mods = progModsOf(me.cls); RPGP.modsT = T; } return RPGP.mods; }
 const mod = k => myMods()[k] || 0;
 function modOf(peer, k){ if (isMe(peer)) return mod(k); const o = others.get(peer); return o && o.pm && fin(o.pm[k]) ? clamp(o.pm[k], -1, 5) : 0; }
@@ -3131,14 +3131,14 @@ function progData(id, data){ const sp = spellOf(id); if (!sp) return; const act 
 function rpgCdK(id){ const sp = spellOf(id); if (!sp || !CL[clsOf(id)] || !CL[clsOf(id)].rpg) return 1; return Math.max(.4, 1 - mod('cd') - mod('cd:' + sp.act)); }
 /* ---- expérience ---- */
 function xpGain(n, why){ if (!playing || !rpgCls() || n <= 0) return; if (RPGP.cheat) { if (!RPGP.cheatMsg) { RPGP.cheatMsg = 1; toast('Commandes de test utilisées : pas d\'expérience pour cette partie'); } return; }
-  const P = progOf(me.cls); if (P.lv >= 50) return; n = Math.round(n); P.xp += n; RPGP.xpPop = (RPGP.xpPop || 0) + n; let up = 0; while (P.lv < 50 && P.xp >= xpNext(P.lv)) { P.xp -= xpNext(P.lv); P.lv++; up = 1; levelUp(P.lv); } if (P.lv >= 50) P.xp = 0; progSave(); }
+  const P = progOf(me.cls); if (P.lv >= 50) return; if (typeof EXP_T !== 'undefined') n *= (EXP_T[expTier()] || EXP_T[0]).xp; n = Math.round(n); P.xp += n; RPGP.xpPop = (RPGP.xpPop || 0) + n; let up = 0; while (P.lv < 50 && P.xp >= xpNext(P.lv)) { P.xp -= xpNext(P.lv); P.lv++; up = 1; levelUp(P.lv); } if (P.lv >= 50) P.xp = 0; progSave(); }
 function levelUp(L){ banner('Niveau ' + L + ' !', (PALIERS[L] ? PALIERS[L] + ' · ' : '') + 'Point de compétence (K)'); sfxChime(); RPGP.modsT = -1;
   puff(me.x, me.y - 1, me.z, '#ffd86a', 50, 6, .8, 1.2, 3); flash(me.x, me.y, me.z, '#ffd86a', 6, .6); }
 function rpgKill(by, boss, type, champ){ if (!(isMe(by) || !room)) return; if (typeof ultAdd === 'function') ultAdd(boss ? 25 : 3); if (RPGP.killW !== W.w) { RPGP.killW = W.w; RPGP.killXp = 0; } const cap = 150 + 30*W.w; if (RPGP.killXp >= cap) return;
   const t = MT[type] || {hp:40}; let n = boss ? 150 : clamp(t.hp/12, 3, 25)*(champ ? 2.5 : 1); n = Math.min(n, cap - RPGP.killXp); RPGP.killXp += n; xpGain(n, 'kill'); }
 function rpgProgTick(){ const st = W.st; if (playing && rpgCls() && typeof GP !== 'undefined') { const mx = (GP.arch === 'sage' ? 130 : GP.arch === 'guerre' ? 80 : 100) + Math.round(mod('mp')); if (me.maxMp !== mx) { me.maxMp = mx; me.mp = Math.min(me.mp, mx); } } if (playing && !RPGP.wasPlaying) { RPGP.cheat = 0; RPGP.cheatMsg = 0; RPGP.run = {}; RPGP.rb = {}; RPGP.modsT = -1; } RPGP.wasPlaying = playing;
   if (playing && RPGP.prevSt === 'fight' && st === 'break' && W.w > 0 && !me.dead) { xpGain(30 + 8*W.w + (W.w % 5 === 0 ? 120 : 0), 'vague'); waveReveal(); } RPGP.prevSt = st;
-  if (playing && room && T > RPGP.pmT) { RPGP.pmT = T + 4; const M = myMods(), pm = {}; for (const k of ['gHp', 'gDmg', 'gSpd', 'gReg', 'gAoe', 'gFire', 'gIce', 'gCore', 'mHp', 'mDmg', 'mSpd', 'mLife', 'mElite', 'mBoom', 'ls', 'rx', 'cnt', 'drain', 'seis']) if (M[k]) pm[k] = r2(M[k]); if (typeof skinOf === 'function') pm.skin = skinOf(me.cls); room.emit('cast', {pm}).catch(()=>{}); }
+  if (playing && room && T > RPGP.pmT) { RPGP.pmT = T + 4; const M = myMods(), pm = {}; for (const k of ['u_rock', 'u_dragon', 'u_bones', 'gHp', 'gDmg', 'gSpd', 'gReg', 'gAoe', 'gFire', 'gIce', 'gCore', 'mHp', 'mDmg', 'mSpd', 'mLife', 'mElite', 'mBoom', 'ls', 'rx', 'cnt', 'drain', 'seis']) if (M[k]) pm[k] = r2(M[k]); if (typeof skinOf === 'function') pm.skin = skinOf(me.cls); room.emit('cast', {pm}).catch(()=>{}); }
   if (RPGP.xpPop && T > (RPGP.xpPopT || 0)) { RPGP.xpPopT = T + .9; qPop('+' + RPGP.xpPop + ' XP', '#ffd86a'); RPGP.xpPop = 0; } xpUI(); }
 function xpUI(){ let e = $('#xpui'); if (!e) { e = document.createElement('div'); e.id = 'xpui'; e.style.cssText = 'position:fixed;left:16px;bottom:-1px;width:330px;height:5px;background:#0009;z-index:13;pointer-events:none'; e.innerHTML = '<s style="display:block;height:100%;background:linear-gradient(90deg,#a07a2a,#ffd86a);text-decoration:none;width:0"></s><small style="position:absolute;left:0;bottom:6px;font:11px Georgia,serif;color:#ffe9b0;text-shadow:0 1px 2px #000;white-space:nowrap"></small>'; document.body.appendChild(e); }
   if (!playing || !rpgCls()) { e.style.display = 'none'; return; } e.style.display = 'block'; const P = progOf(me.cls), k = P.lv >= 50 ? 1 : P.xp/xpNext(P.lv); e.firstChild.style.width = (k*100).toFixed(1) + '%';
@@ -3296,6 +3296,7 @@ function rpgGuideHTML(){ const cls = ['elem', 'summon', 'celest', 'glad', 'necro
   h += '<h4>Synergies entre classes</h4><ul><li>Feu, Glace ou Foudre de l\'Élémentaire près d\'un golem l\'imprègne 10 s : ses coups brûlent, ralentissent ou frappent 30 % plus vite.</li><li>Le Céleste soigne le golem et les serviteurs (rayon visé, Circle of Life).</li><li>Les monstres étourdis ou emprisonnés (Ice Prison, Titan Fist, Leaping Strike) prennent +30 % des poings du Gladiateur.</li><li>Seismic Fist électrocute les monstres mouillés (Water Triangle, Apocalypse).</li><li>Pendant l\'Ascension d\'un Céleste, golems et serviteurs attirent les monstres.</li></ul>';
   h += '<h4>Progression</h4><ul><li><b>Pendant la partie</b> : l\'autel après les vagues propose 3 améliorations (PV max, mana, dégâts, recharges, vitesse, défense, régénération, bonus de classe) : commune, rare, épique (dès la vague 4), légendaire (dès la vague 8). Elles disparaissent à la fin de la partie.</li><li><b>Permanente</b> : niveau 1 à 50 par classe. Expérience des éliminations (plafonnée par vague), vagues, boss, objectifs, événements. 1 point de compétence par niveau, 3 branches, spécialisations aux niveaux 7 et 25, paliers 3, 5, 10, 12, 15, 20, 30, 40, 50. Les commandes de test coupent l\'expérience. Code de sauvegarde dans l\'arbre (K).</li></ul>';
   h += '<h4>Grandes incantations de classe</h4><p>Au niveau 30, l\'arbre (K) propose la grande incantation de votre classe (3 points). Elle se prononce en trois phrases à la suite (5 s entre chaque), recharge 90 s :</p><ul>' + Object.entries(CGRAND).map(([c, G]) => '<li><b style="color:' + CL[c].col + '">' + CL[c].name + '</b> — « ' + G.steps.join(' » → « ') + ' » : ' + esc(G.d) + '</li>').join('') + '</ul><h4>Calibrage vocal</h4><p>À la première partie avec une classe (micro actif), le jeu vous fait dire chaque formule une fois et retient votre prononciation. Bouton « Calibrer ma voix » dans l\'arbre (K) pour recommencer ; J pour passer.</p>';
+  h += '<h4>Expéditions</h4><p>Une partie est une expédition en 4 chapitres de 5 vagues (Ruines oubliées, Crypte écarlate, Antre du Wyrm, Sanctuaire de Velkar), chacun conclu par un boss. Vaincre Velkar donne la victoire : expérience, objet garanti, record de temps, et débloque la difficulté suivante (Héroïque puis Légendaire : monstres plus résistants, plus d\'expérience, meilleur butin). Choix de la difficulté dans le menu.</p><h4>Butin</h4><p>Les monstres (surtout champions et boss) laissent des orbes lumineux (blanc commun, bleu rare, violet épique, orange légendaire) : passez dessus. Chaque joueur ramasse son propre butin. <b>I</b> ouvre l\'inventaire : 3 emplacements (anneau, amulette, relique de classe). Les reliques légendaires ont un effet unique par classe (second dragon, rochers du golem, Ascension de 15 s, failles des poings, goules bonus d\'Arise). Records et comparaison avec vos amis : bouton « Records et butin » du menu.</p>';
   h += '<h4>Ennemis à surveiller</h4><ul><li><b>Gargouille</b> (dès la vague 4) : vole hors de portée ; seuls les projectiles, la foudre, les rayons et les orbes la touchent bien (les autres coups font 25 %), sauf quand elle pique pour attaquer.</li><li><b>Chevalier d\'os blindé</b> (dès la vague 6) : les sorts à distance ne font que 30 % ; poings, golem et serviteurs le brisent.</li><li><b>Mange-âmes</b> (s\'il y a un nécromancien) : court dévorer les âmes au sol et grossit à chaque âme. Tuez-le ou récoltez vite (Harvest).</li><li><b>Golem des Ruines</b> : s\'acharne sur les golems et les serviteurs. <b>Liche Écarlate</b> : toutes les 12 s, un miroir de 3,5 s renvoie 30 % des sorts à distance ; le corps à corps et les invocations passent.</li></ul><h4>Apparences</h4><p>Aux niveaux 10, 20, 30, 40 et 50 d\'une classe, une nouvelle teinte (Azur, Or, Sang, Améthyste, Aurore) se débloque dans l\'arbre (K) : runes, ailes, golem, âmes, visible par tous.</p>';
   h += '<h4>Résonance et Éveil</h4><p>La jauge de Résonance se remplit avec les sorts bien prononcés. À 100 %, dites « Awaken » ou appuyez sur F : 8 s de sorts gratuits, dégâts ×2 et zones ×1,5.</p>';
   return h; }
@@ -3310,7 +3311,7 @@ function saveBoxHTML(){ return '<h4>Code de sauvegarde</h4><small>Copiez ce code
 addEventListener('click', e => { const t = e.target.closest && e.target.closest('button'); if (!t) return; if (t.classList.contains('rt-copy')) { const a = $('#rt-code'); a.select(); try { navigator.clipboard.writeText(a.value); } catch (er) { document.execCommand('copy'); } toast('Code copié'); }
   else if (t.classList.contains('rt-imp')) { const a = $('#rt-code'); if (progImport(a.value)) { toast('Progression importée'); const p = $('#tree'); if (p) p.innerHTML = rpgTreeHTML(TREE_C || pickCls); } else toast('Code invalide'); } }, true);
 /* ---- tick ---- */
-function polishTick(dt){ if (typeof grandTick2 === 'function') grandTick2(); if (typeof vfxTick === 'function') vfxTick(dt); if (typeof contentTick === 'function') contentTick(dt); if (typeof mdlTick === 'function') mdlTick(); ultUI(); ctutoTick(dt); if (playing && rpgCls() && !me.dead && W.st === 'fight') ultAdd(.45*dt); if (!playing) RPG.ult = 0;
+function polishTick(dt){ if (typeof grandTick2 === 'function') grandTick2(); if (typeof vfxTick === 'function') vfxTick(dt); if (typeof contentTick === 'function') contentTick(dt); if (typeof mdlTick === 'function') mdlTick(); if (typeof expLootTick === 'function') expLootTick(dt); ultUI(); ctutoTick(dt); if (playing && rpgCls() && !me.dead && W.st === 'fight') ultAdd(.45*dt); if (!playing) RPG.ult = 0;
   const g = $('#gparch'); if (g && g.closest('label')) { g.closest('label').style.display = 'none'; if (typeof GP !== 'undefined') GP.arch = 'sorcier'; }
   for (const id of ['allyui', 'necroui']) { const e = $('#' + id); if (e) e.style.bottom = '140px'; } }
 
@@ -3532,6 +3533,80 @@ function monModel(t){ const D = MON_MDL[t]; if (!D || !mdlReady(D.k)) return nul
   scene.add(g); return g; }
 /* ---- remplacement des anciens modèles dès que les nouveaux sont prêts ---- */
 function mdlTick(){ for (const [p, o] of others) { if (!o.g || o.g.userData.model || !CLS_MDL[o.cls] || !mdlReady(CLS_MDL[o.cls].k)) continue; const old = o.g, ng = wizardMesh(o.cls, o.name); if (!ng || !ng.userData.model) continue; ng.position.copy(old.position); ng.rotation.copy(old.rotation); scene.remove(old); o.g = ng; } }
+
+/* ===================== EXPÉDITIONS (4 chapitres, difficultés, victoire, records) et BUTIN (objets à équiper) ===================== */
+/* ---- expéditions : les 20 vagues de l'arène deviennent 4 chapitres, chacun conclu par un boss ---- */
+const EXP_CH = [{n:'Les Ruines oubliées', boss:'Golem des Ruines'}, {n:'La Crypte écarlate', boss:'Liche Écarlate'}, {n:'L\'Antre du Wyrm', boss:'Wyrm des Ombres'}, {n:'Le Sanctuaire de Velkar', boss:'Archimage Velkar'}];
+const EXP_T = [{n:'Normale', hp:1, dmg:1, xp:1, loot:0}, {n:'Héroïque', hp:1.4, dmg:1.25, xp:1.5, loot:1}, {n:'Légendaire', hp:1.9, dmg:1.5, xp:2, loot:2}];
+let RECS = {}; try { RECS = JSON.parse(localStorage.getItem('incantatio-rpg-records') || '{}') || {}; } catch (e) { RECS = {}; }
+const recSave = () => { try { localStorage.setItem('incantatio-rpg-records', JSON.stringify(RECS)); } catch (e) {} };
+const EXP = {tier:0, sel:0, t0:0, kills0:0, deaths0:0, lastW:0, done:0, prevSt:'', remote:-1};
+try { EXP.sel = +(localStorage.getItem('incantatio-rpg-tier') || 0) || 0; } catch (e) {}
+const expUnlocked = () => (CPROG.expU || 0);
+const expTier = () => isHost ? EXP.tier : Math.max(0, EXP.remote);
+const expHp = () => (EXP_T[expTier()] || EXP_T[0]).hp, expDmg = () => (EXP_T[expTier()] || EXP_T[0]).dmg;
+function expMenu(){ const mt = $('#mtree'); if (mt && !$('#mrecs')) { const b = document.createElement('button'); b.id = 'mrecs'; b.type = 'button'; b.textContent = 'Records et butin'; b.className = mt.className; mt.parentNode.insertBefore(b, mt.nextSibling); b.onclick = e => { e.stopPropagation(); invOpen('recs'); }; }
+  const row = $('#gpdiff') && $('#gpdiff').closest('.row'); if (!row || $('#exptier')) return; const l = document.createElement('label'); l.className = 'field';
+  l.innerHTML = 'Expédition<select id="exptier">' + EXP_T.map((t, i) => `<option value="${i}" ${i > expUnlocked() ? 'disabled' : ''} ${i === Math.min(EXP.sel, expUnlocked()) ? 'selected' : ''}>${t.n}${i ? ' (vie ×' + t.hp + ', dégâts ×' + t.dmg + ', XP ×' + t.xp + ')' : ''}${i > expUnlocked() ? ' 🔒 gagner en ' + EXP_T[i - 1].n : ''}</option>`).join('') + '</select>';
+  row.appendChild(l); l.querySelector('select').onchange = e => { EXP.sel = +e.target.value; try { localStorage.setItem('incantatio-rpg-tier', EXP.sel); } catch (er) {} };
+ }
+function expTick(){ if (!rpgCls()) return; if (playing && !EXP.started) { EXP.started = 1; EXP.tier = Math.min(EXP.sel, expUnlocked()); EXP.t0 = T; EXP.kills0 = (typeof STATS !== 'undefined' ? STATS.kills : 0); EXP.deaths0 = me.deaths || 0; EXP.done = 0; EXP.lastW = 0; if (EXP.tier) toast('Expédition ' + EXP_T[EXP.tier].n + ' : monstres plus résistants, plus d\'expérience et de meilleur butin'); }
+  if (!playing) { EXP.started = 0; return; }
+  if (W.st === 'fight' && W.w !== EXP.lastW) { EXP.lastW = W.w; if ((W.w - 1) % 5 === 0 && W.w <= 16) { const c = (W.w - 1)/5; setTimeout(() => banner('Chapitre ' + (c + 1) + ' : ' + EXP_CH[c].n, 'Boss du chapitre : ' + EXP_CH[c].boss + ' (vague ' + (c*5 + 5) + ')'), 1200); } }
+  if (EXP.prevSt !== 'over' && W.st === 'over' && !EXP.done) { EXP.done = 1; expEnd(false); } EXP.prevSt = W.st;
+  const R = RECS[me.cls] || (RECS[me.cls] = {best:0, wins:[0, 0, 0], time:[0, 0, 0]}); if (W.w > R.best) { R.best = W.w; recSave(); } }
+function expVictory(){ if (!rpgCls() || EXP.done) return; EXP.done = 1; setTimeout(() => expEnd(true), 6500); }
+function expEnd(win){ const tier = expTier(), t = Math.round(T - EXP.t0), R = RECS[me.cls] || (RECS[me.cls] = {best:0, wins:[0, 0, 0], time:[0, 0, 0]}), kills = (typeof STATS !== 'undefined' ? STATS.kills : 0) - EXP.kills0, chap = Math.min(4, Math.ceil(Math.max(1, W.w)/5));
+  let rew = []; if (win) { R.wins[tier] = (R.wins[tier] || 0) + 1; if (!R.time[tier] || t < R.time[tier]) R.time[tier] = t; const xp = 500*(tier + 1); RPGP.cheat ? 0 : xpGain(xp, 'victoire'); rew.push('+' + xp + ' XP');
+    if (tier >= expUnlocked() && tier < 2) { CPROG.expU = tier + 1; progSave(); rew.push('Difficulté ' + EXP_T[tier + 1].n + ' débloquée'); } const it = lootRoll(3 + (tier >= 2 ? 0 : 0), me.cls, true); invAdd(it); rew.push('Objet ' + RAR[it.r - 1] + ' : ' + it.n); }
+  recSave(); let e = $('#expend'); if (!e) { e = document.createElement('div'); e.id = 'expend'; document.body.appendChild(e); }
+  e.style.cssText = 'position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);min-width:420px;padding:18px 24px;border-radius:14px;background:#120e0af2;border:2px solid ' + (win ? '#ffd86a' : '#c84a3a') + ';color:#f3e6c8;font:15px Georgia,serif;text-align:center;z-index:60';
+  e.innerHTML = `<h2 style="font-family:Cinzel,serif;color:${win ? '#ffd86a' : '#ff8a6a'};margin:0 0 6px">${win ? 'Victoire !' : 'Défaite'}</h2><p>${esc(CL[me.cls].name)} · Expédition ${EXP_T[tier].n}<br>${win ? 'Les 4 chapitres sont conquis' : 'Tombé au chapitre ' + chap + ' (' + esc(EXP_CH[chap - 1].n) + '), vague ' + W.w}</p><p>Temps ${Math.floor(t/60)} min ${t % 60} s · ${kills} éliminations</p>${rew.length ? '<p style="color:#ffd86a">' + rew.map(esc).join('<br>') + '</p>' : ''}<p><small>Record ${esc(CL[me.cls].name)} : vague ${R.best}${R.time[tier] ? ' · meilleure victoire ' + EXP_T[tier].n + ' en ' + Math.floor(R.time[tier]/60) + ' min ' + R.time[tier] % 60 + ' s' : ''}</small></p><button id="expok" style="font:15px Georgia,serif;padding:6px 16px;border-radius:8px;border:1px solid #c9a24a;background:#2a1e10;color:#f3e6c8;cursor:pointer">${win ? 'Continuer' : 'OK'}</button>`;
+  $('#expok').onclick = () => { e.remove(); }; }
+/* ---- butin ---- */
+const SLOTS = {ring:'Anneau', amulet:'Amulette', relic:'Relique de classe'};
+const AFF = [['dmg', 'dégâts', .04, '%'], ['cd', 'recharges', .03, '-%'], ['def', 'dégâts subis', .03, '-%'], ['hp', 'PV max', 8, '+'], ['mp', 'mana max', 8, '+'], ['spd', 'vitesse', .03, '%'], ['mana', 'régénération de mana', .08, '%'], ['ls', 'vol de vie', .015, '%'], ['hreg', 'PV par seconde', .4, '+/s']];
+const AFF_C = {elem:[['rx', 'réactions', .08, '%'], ['zone', 'zones', .05, '%']], summon:[['gHp', 'vie du golem', .08, '%'], ['gDmg', 'dégâts du golem', .08, '%']], celest:[['heal', 'soins', .07, '%'], ['shield', 'boucliers', .1, '%']], glad:[['basic', 'coups de poing', .07, '%'], ['rage', 'gain de Rage', .1, '%']], necro:[['mHp', 'vie des serviteurs', .08, '%'], ['mDmg', 'dégâts des serviteurs', .08, '%']]};
+const UNIQ = {elem:{n:'Cœur du Dragon', k:'u_dragon', d:'Fire Dragon +40 % et un second dragon le suit'}, summon:{n:'Pierre-Mère', k:'u_rock', d:'Le golem lance un rocher sur un ennemi éloigné toutes les 4 s'}, celest:{n:'Plume de Séraphin', k:'u_asc', d:'Ascension dure 15 s au lieu de 10'}, glad:{n:'Poing du Champion', k:'seis', d:'Chaque 3e coup de poing ouvre une faille (Rune sismique)'}, necro:{n:'Couronne des Os', k:'u_bones', d:'Arise relève aussi une goule temporaire toutes les 2 âmes'}};
+const NAMES = {ring:['Anneau', 'Bague', 'Sceau'], amulet:['Amulette', 'Talisman', 'Pendentif'], relic:['Relique', 'Fétiche', 'Emblème']}, QUAL = ['de cendre', 'des marées', 'de givre', 'de l\'orage', 'des âmes', 'du titan', 'de l\'aube', 'du crépuscule'];
+let INV = {bag:[], eq:{}}; try { INV = JSON.parse(localStorage.getItem('incantatio-rpg-loot') || '') || INV; } catch (e) {} INV.bag = INV.bag || []; INV.eq = INV.eq || {};
+const invSave = () => { try { localStorage.setItem('incantatio-rpg-loot', JSON.stringify(INV)); } catch (e) {} RPGP.modsT = -1; };
+function lootRoll(rMin, cls, boss){ let r = 1; const x = Math.random(); r = x < .03 + expTier()*.02 ? 4 : x < .15 + expTier()*.05 ? 3 : x < .45 ? 2 : 1; if (rMin) r = Math.max(r, rMin); if (boss && Math.random() < .25) r = Math.min(4, r + 1);
+  const slot = pick(['ring', 'amulet', 'relic']), c = slot === 'relic' ? cls : null, pool = AFF.concat(c ? AFF_C[c] : []), n = Math.min(pool.length, r === 1 ? 1 : r === 2 ? 2 : 3), m = {}, used = new Set(), lvk = 1 + Math.min(1, W.w/20) + expTier()*.3;
+  while (Object.keys(m).length < n) { const a = pick(pool); if (used.has(a[0])) continue; used.add(a[0]); const v = a[2]*(1 + Math.random()*.6)*(.8 + r*.35)*lvk; m[a[0]] = a[3] === '+' ? Math.max(1, Math.round(v)) : a[3] === '+/s' ? Math.round(v*10)/10 : Math.round(v*1000)/1000; }
+  let nm = pick(NAMES[slot]) + ' ' + pick(QUAL); if (r === 4 && c) { const U = UNIQ[c]; m[U.k] = 1; nm = U.n; }
+  return {id:Date.now().toString(36) + Math.random().toString(36).slice(2, 6), slot, cls:c, r, n:nm, m}; }
+function itemDesc(it){ const all = AFF.concat(...Object.values(AFF_C)); return Object.entries(it.m).map(([k, v]) => { if (k.startsWith('u_') || k === 'seis') { const U = Object.values(UNIQ).find(u => u.k === k); return '★ ' + (U ? U.d : k); } const a = all.find(x => x[0] === k); if (!a) return ''; return a[3] === '+' ? '+' + v + ' ' + a[1] : a[3] === '+/s' ? '+' + v + ' ' + a[1] : a[3] === '-%' ? '−' + Math.round(v*100) + ' % de ' + a[1] : '+' + Math.round(v*100) + ' % de ' + a[1]; }).filter(Boolean).join(' · '); }
+function invAdd(it){ INV.bag.unshift(it); if (INV.bag.length > 24) INV.bag.length = 24; invSave(); }
+function invMods(){ const M = {}; for (const id of Object.values(INV.eq)) { const it = INV.bag.find(x => x.id === id); if (!it || (it.cls && it.cls !== me.cls)) continue; for (const [k, v] of Object.entries(it.m)) M[k] = (M[k] || 0) + v; } return M; }
+/* orbes de butin : chaque joueur ramasse le sien (butin individuel) */
+const LOOT = new Map(); let lootId = 1;
+function lootDrop(m){ if (!isHost || !rpgCls()) return; const t = MT[m.type]; if (t.prop || t.head) return; const p = t.boss ? 1 : m.champ ? .3 : m.eaten ? .4 : .035 + expTier()*.015; if (Math.random() > p) return; const r = t.boss ? 3 : m.champ ? 2 : 1, id = lootId++; W.hits.push(['loot', id, r2(m.x), r2(m.z), r]); lootOrb(id, m.x, m.z, r); }
+function lootOrb(id, x, z, r){ const col = [0, 0xd8d0c0, 0x4aa8ff, 0xc86aff, 0xff9a2a][r], g = new THREE.Group(), s = new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex, color:col, transparent:true, opacity:.9, blending:THREE.AdditiveBlending, depthWrite:false})); s.scale.setScalar(1.1); g.add(s);
+  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(.18, 0), new THREE.MeshBasicMaterial({color:col})); g.add(gem); const beam = new THREE.Mesh(new THREE.CylinderGeometry(.06, .06, 6, 6, 1, true), new THREE.MeshBasicMaterial({color:col, transparent:true, opacity:.25, blending:THREE.AdditiveBlending, depthWrite:false})); beam.position.y = 3; g.add(beam);
+  g.position.set(x, groundH(x, z) + .6, z); scene.add(g); LOOT.set(id, {id, x, z, r, g, t:T}); }
+function lootTick(){ for (const L of [...LOOT.values()]) { L.g.rotation.y += .03; L.g.position.y = groundH(L.x, L.z) + .6 + Math.sin(T*3 + L.id)*.1; if (T - L.t > 60) { scene.remove(L.g); LOOT.delete(L.id); continue; }
+    if (playing && rpgCls() && !me.dead && Math.hypot(me.x - L.x, me.z - L.z) < 1.8) { scene.remove(L.g); LOOT.delete(L.id); const it = lootRoll(L.r, me.cls, L.r >= 3); invAdd(it); banner('Butin ' + RAR[it.r - 1] + ' : ' + it.n, itemDesc(it) + ' · I : inventaire'); sfxChime(); } } if (!playing && LOOT.size) { for (const L of LOOT.values()) scene.remove(L.g); LOOT.clear(); } }
+/* ---- inventaire et records (touche I, bouton du menu) ---- */
+function invOpen(tab){ let p = $('#inv'); if (!p) { p = document.createElement('div'); p.id = 'inv'; document.body.appendChild(p); p.addEventListener('click', invClick); }
+  p.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(900px,94vw);max-height:88vh;overflow:auto;padding:14px 18px;border-radius:14px;background:#0d0a08f5;border:1px solid #c9a24a;color:#eadbb9;font:13px Georgia,serif;z-index:55'; p.dataset.tab = tab || p.dataset.tab || 'inv'; p.innerHTML = invHTML(p.dataset.tab); }
+function invHTML(tab){ const RC = ['', '#d8d0c0', '#4aa8ff', '#c86aff', '#ff9a2a'], cls = playing ? me.cls : pickCls;
+  let h = '<div style="display:flex;gap:8px;margin-bottom:8px"><button data-tab="inv">Inventaire</button><button data-tab="recs">Records</button><span style="flex:1"></span><button data-close="1">Fermer (I)</button></div>';
+  if (tab === 'recs') { h += '<h3 style="font-family:Cinzel,serif;color:#ffd86a">Records par classe</h3><table style="width:100%;border-collapse:collapse"><tr><th align="left">Classe</th><th>Niveau</th><th>Meilleure vague</th>' + EXP_T.map(t => '<th>Victoires ' + t.n + '</th>').join('') + '</tr>' + ['elem', 'summon', 'celest', 'glad', 'necro'].map(c => { const R = RECS[c] || {best:0, wins:[0, 0, 0], time:[0, 0, 0]}; return '<tr><td style="color:' + CL[c].col + '">' + CL[c].name + '</td><td align="center">' + progLevel(c) + '</td><td align="center">' + R.best + '</td>' + [0, 1, 2].map(i => '<td align="center">' + (R.wins[i] || 0) + (R.time[i] ? ' (' + Math.floor(R.time[i]/60) + ' min ' + R.time[i] % 60 + ')' : '') + '</td>').join('') + '</tr>'; }).join('') + '</table>';
+    h += '<p><small>Partagez vos records : copiez ce code et envoyez-le à vos amis ; collez le leur pour comparer.</small><br><textarea id="rec-code" rows="2" style="width:100%;font:11px monospace;background:#0008;color:#eadbb9;border:1px solid #c9a24a66">' + btoa(unescape(encodeURIComponent(JSON.stringify({n:(me.name || $('#nm').value || 'Sorcier'), r:RECS, l:Object.fromEntries(['elem', 'summon', 'celest', 'glad', 'necro'].map(c => [c, progLevel(c)]))})))) + '</textarea><button data-cmp="1">Comparer avec le code collé</button><span id="rec-cmp"></span></p>'; return h; }
+  const eqIds = Object.values(INV.eq); h += '<h3 style="font-family:Cinzel,serif;color:#ffd86a">Équipement (' + CL[cls].name + ')</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">' + Object.entries(SLOTS).map(([s, n]) => { const it = INV.bag.find(x => x.id === INV.eq[s]); return '<div style="border:1px solid #c9a24a55;border-radius:8px;padding:6px;min-height:60px"><b>' + n + '</b><br>' + (it ? '<span style="color:' + RC[it.r] + '">' + esc(it.n) + '</span><br><small>' + esc(itemDesc(it)) + (it.cls && it.cls !== cls ? ' <i>(autre classe : inactif)</i>' : '') + '</small>' : '<small>vide</small>') + '</div>'; }).join('') + '</div>';
+  h += '<h3 style="font-family:Cinzel,serif;color:#ffd86a">Sac (' + INV.bag.length + '/24)</h3>' + (INV.bag.length ? '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">' + INV.bag.map(it => '<div style="border:1px solid ' + RC[it.r] + '66;border-radius:8px;padding:6px"><b style="color:' + RC[it.r] + '">' + esc(it.n) + '</b> <small>· ' + SLOTS[it.slot] + (it.cls ? ' (' + CL[it.cls].name + ')' : '') + ' · ' + RAR[it.r - 1] + '</small><br><small>' + esc(itemDesc(it)) + '</small><br>' + (eqIds.includes(it.id) ? '<small style="color:#9fe89f">équipé</small> <button data-uneq="' + it.slot + '">Retirer</button>' : '<button data-eq="' + it.id + '">Équiper</button> <button data-del="' + it.id + '">Jeter</button>') + '</div>').join('') + '</div>' : '<p><small>Les monstres (surtout champions et boss) laissent des orbes lumineux : passez dessus pour ramasser un objet. Une victoire d\'expédition en donne un aussi.</small></p>');
+  return h; }
+function invClick(e){ const t = e.target.closest('button'); if (!t) return; e.stopPropagation(); const p = $('#inv');
+  if (t.dataset.close) { p.remove(); return; } if (t.dataset.tab) p.dataset.tab = t.dataset.tab; else if (t.dataset.eq) { const it = INV.bag.find(x => x.id === t.dataset.eq); if (it) { INV.eq[it.slot] = it.id; invSave(); } } else if (t.dataset.uneq) { delete INV.eq[t.dataset.uneq]; invSave(); } else if (t.dataset.del) { INV.bag = INV.bag.filter(x => x.id !== t.dataset.del); for (const s of Object.keys(INV.eq)) if (INV.eq[s] === t.dataset.del) delete INV.eq[s]; invSave(); }
+  else if (t.dataset.cmp) { try { const o = JSON.parse(decodeURIComponent(escape(atob($('#rec-code').value.trim())))); $('#rec-cmp').innerHTML = '<br><b>' + esc(o.n || '?') + '</b> : ' + ['elem', 'summon', 'celest', 'glad', 'necro'].map(c => CL[c].name + ' niv. ' + ((o.l || {})[c] || 1) + ', vague ' + (((o.r || {})[c] || {}).best || 0)).join(' · '); } catch (er) { $('#rec-cmp').textContent = ' Code invalide'; } return; }
+  p.innerHTML = invHTML(p.dataset.tab); }
+addEventListener('keydown', e => { if (e.code === 'KeyI' && !(typeof chatOpen !== 'undefined' && chatOpen) && rpgCls()) { const p = $('#inv'); if (p) p.remove(); else invOpen('inv'); } });
+/* ---- effets uniques des objets légendaires ---- */
+function uniqTick(dt){ if (!isHost) return; for (const a of ALLIES.values()) { if (a.deadT || !modOf(a.owner === 'me' ? me.peer : a.owner, 'u_rock')) continue; a.rockT = (a.rockT ?? 4) - dt; if (a.rockT > 0) continue; a.rockT = 4; let best = null, bd = 22; for (const m of mons.values()) { const d = Math.hypot(m.x - a.x, m.z - a.z); if (d > 6 && d < bd) { bd = d; best = m; } }
+    if (best) { const tx = best.x, tz = best.z; W.hits.push(['gslam', r2(tx), r2(tz), 2.5]); fx.push({delay:.5, run:() => { allySlamFx(tx, tz, 2.5); for (const m of rxNear(tx, tz, 2.5)) hurt(m, 30*allyWk(), {el:'spirit', sn:'Rocher', aid:a.id, push:2}, 0, 0, a.owner); }}); } } }
+function lootPmKeys(){ return ['u_rock']; }
+function expLootTick(dt){ expMenu(); expTick(); lootTick(); uniqTick(dt); }
 
 /* ===================== ARÈNE VIVANTE : biomes, transformations, dangers, destruction ===================== */
 /* Le biome se déduit de la vague (identique chez tous les joueurs, sans message réseau) ; la transformation dure 12 s pendant la pause entre deux vagues.
@@ -5231,7 +5306,7 @@ function hurt(m, dmg, f, px, pz, by){ dmg = rpgHurt(m, dmg, f, by);
 }
 function killMon(m){
   if (!mons.has(m.id)) return; const t = MT[m.type];
-  mons.delete(m.id); deathFx(m); W.k++; soulDrop(m); rxDeath(m); bossOnKill(m); if (m.master != null) return;
+  mons.delete(m.id); deathFx(m); W.k++; soulDrop(m); lootDrop(m); rxDeath(m); bossOnKill(m); if (m.master != null) return;
   const r = Math.random(), tp = m.type === 2 ? .12 : .035;
   if (t.boss) { addDrop('tome', m.x, m.z); if (Math.random() < .4) addDrop('tome', m.x + 1.6, m.z); addDrop('hp', m.x - 1.6, m.z + 1.6); addDrop('mp', m.x + 1.6, m.z + 1.6); addDrop('pw', m.x, m.z - 2); }
   else if (r < tp) addDrop('tome', m.x, m.z);
@@ -5282,7 +5357,7 @@ function startWave(){
 }
 function spawnMon(type){
   const a = Math.random()*Math.PI*2, np = Math.max(1, players().length + (me.dead ? 1 : 0));
-  const mx = MT[type].hp * (MT[type].boss ? 1 + .1*(W.w-1) : 1 + .07*(W.w-1)) * (.7 + .3*np) * ddiff().hp;
+  const mx = MT[type].hp * (MT[type].boss ? 1 + .1*(W.w-1) : 1 + .07*(W.w-1)) * (.7 + .3*np) * ddiff().hp * (typeof expHp === 'function' ? expHp() : 1);
   const sp0 = spawnPos(type), m = {id:W.nid++, type, x:sp0[0], z:sp0[1], hp:mx, max:Math.round(mx), atk:0, a:0, slowT:0, dotT:0, sk:4};
   m.tx = m.x; m.tz = m.z; m.g = monsterMesh(type); mons.set(m.id, m); champMaybe(m);
   if (MT[type].boss) bossSpawned(m);
@@ -5370,7 +5445,7 @@ function hostStep(dt){
   for (const [id, d] of drops) { d.age += dt; if (d.age > 60) { scene.remove(d.g); drops.delete(id); } }
   W.emitT -= dt;
   if (room && W.emitT <= 0) { W.emitT = .1;
-    const pk = {md:mode, w:W.w, st:W.st, t:Math.ceil(W.t), k:W.k, m:arr.slice(0, 45).map(m => [m.id, m.type, r2(m.x), r2(m.z), Math.max(0, Math.round(m.hp)), m.max, m.a > 0 ? 1 : 0]), d:[...drops.values()].map(d => [d.id, d.t, r2(d.x), r2(d.z)]), al:allyPack(), mn:minPack(), h:W.hits.splice(0, 20), pl:Object.fromEntries(roster)};
+    const pk = {md:mode, w:W.w, st:W.st, t:Math.ceil(W.t), k:W.k, m:arr.slice(0, 45).map(m => [m.id, m.type, r2(m.x), r2(m.z), Math.max(0, Math.round(m.hp)), m.max, m.a > 0 ? 1 : 0]), d:[...drops.values()].map(d => [d.id, d.t, r2(d.x), r2(d.z)]), al:allyPack(), mn:minPack(), ex:EXP.tier, h:W.hits.splice(0, 20), pl:Object.fromEntries(roster)};
     room.emit('world', pk).catch(()=>{}); }
   else if (!room) W.hits.length = 0;
 }
@@ -5739,7 +5814,7 @@ function campaignBossDown(m){
   if (m.type === 14 && !W.won) { W.won = 1; W.hits.push(['frag', 4, 5]); onFrag(4, 5); }
 }
 function onFrag(n, page){ setFrag(n); flash(0, 5, 0, '#bfe2ff', 12, 1.2); puff(0, 4.6, 0, '#bfe2ff', 60, 10, 1.4, 1, 2);
-  if (page === 5) { banner('Victoire !', 'Le Cristal d\'Harmonie est reformé'); setTimeout(() => showStory(5), 2500); }
+  if (page === 5) { if (typeof expVictory === 'function') expVictory(); banner('Victoire !', 'Le Cristal d\'Harmonie est reformé'); setTimeout(() => showStory(5), 2500); }
   else { banner('Fragment ' + n + '/3 récupéré', 'Le Cristal d\'Harmonie se reforme'); setTimeout(() => showStory(page), 2200); } }
 
 /* --- ARCHIMAGE : sorts retournés, nova, reflets, DUEL VOCAL --- */
@@ -5833,7 +5908,7 @@ function healCheck(text, final){ if (!text) return false; for (const x of norm(t
 function onWorld(msg){
   if (isHost || msg.peer !== hostPeer) return; const D = msg.data; if (!D || !Array.isArray(D.m)) return;
   if (D.md === 'coop' || D.md === 'pvp') { if (mode !== D.md) { mode = D.md; toast('Mode de la salle : ' + (mode === 'pvp' ? 'chacun pour soi' : 'coop')); } }
-  allyRecv(D.al); minRecv(D.mn); if (fin(D.w)) W.w = D.w; if (['fight','break','over'].includes(D.st)) W.st = D.st; if (fin(D.t)) W.t = D.t; if (fin(D.k)) W.k = D.k;
+  allyRecv(D.al); minRecv(D.mn); if (fin(D.ex)) EXP.remote = D.ex; if (fin(D.w)) W.w = D.w; if (['fight','break','over'].includes(D.st)) W.st = D.st; if (fin(D.t)) W.t = D.t; if (fin(D.k)) W.k = D.k;
   const seen = new Set();
   for (const t of D.m) { if (!Array.isArray(t)) continue; const [id, ty, x, z, hp, mx, a] = t; if (!fin(id) || !MT[ty] || !fin(x) || !fin(z) || !fin(hp) || !fin(mx)) continue; seen.add(id);
     let m = mons.get(id); if (!m) { m = {id, type:ty, x, z, slowT:0, dotT:0, atk:0, sk:4}; m.g = monsterMesh(ty); mons.set(id, m); }

@@ -26,7 +26,7 @@ function rpgBlock(id){ const sp = spellOf(id); if (!sp) return false; if (typeof
 /* ---- vitesse, régénération, défense ---- */
 function rpgSpeed(){ let k = 1 + mod('spd'); if (bOn(me.peer, 'apex')) k *= 1.3; if (bOn(me.peer, 'berserk')) k *= 1.1; return k; }
 function rpgRegen(){ return (me.cls === 'glad' ? .35 : 1)*(1 + mod('mana')); }
-function rpgDefend(d){ if (d <= 0) return d; d *= 1 - Math.min(.6, mod('def')); if (RPG.fly > T) d *= .3; if (typeof ultAdd === 'function') ultAdd(d*.4); if (me.cls === 'glad') me.mp = Math.min(me.maxMp, me.mp + d*.6*(1 + mod('rage')));
+function rpgDefend(d){ if (d <= 0) return d; if (typeof expDmg === 'function') d *= expDmg(); d *= 1 - Math.min(.6, mod('def')); if (RPG.fly > T) d *= .3; if (typeof ultAdd === 'function') ultAdd(d*.4); if (me.cls === 'glad') me.mp = Math.min(me.maxMp, me.mp + d*.6*(1 + mod('rage')));
   if (RPG.shield > 0 && T < RPG.shieldT) { const a = Math.min(RPG.shield, d); RPG.shield -= a; d -= a; if (a > 0) { qPop('Bouclier divin', '#ffe9a8'); puff(me.x, me.y - .6, me.z, '#ffe9a8', 8, 3, .5, .5, 1); } }
   if (RPG.second > T && me.hp - d <= 0) { RPG.second = 0; d = Math.max(0, me.hp - 1); fx.push({delay:.05, run:() => { if (!me.dead) { me.hp = rpgMaxHp()*.5; banner('Second souffle !', 'La lumière vous relève'); puff(me.x, me.y - 1, me.z, '#ffe9a8', 40, 5, 1, 1, 3); } }}); }
   return d; }
@@ -74,8 +74,8 @@ function rpgCast2(data, caster, mine, sp, el, col, t, dmg, pot, big){ const du =
   else if (sp.act === 'drain') { const id = Array.isArray(data.ids) && typeof data.ids[0] === 'number' ? data.ids[0] : null; if (id == null) { if (mine) toast('Life Drain : visez un ennemi'); return; }
     rpgZone({dur:4, every:.5, upd:() => { const m = mons.get(id); if (m && Math.random() < .5) beamFx(isMe(caster) ? staffTipPos() : rpgCasterPos(caster, o), new THREE.Vector3(m.x, (m.gy || 0) + MT[m.type].h*.6, m.z), '#9aff7a', '#ff4a6a'); },
       tick:() => { const m = mons.get(id); if (!m) return; hurt(m, dmg, {el:'spirit', sn:sp.n, rx:1}, 0, 0, caster); const h = dmg*.6*(1 + modOf(caster, 'heal')); if (isMe(caster)) { heal(h); graceAdd(h); } else W.hits.push(['heal', caster, Math.round(h)]); }}); }
-  else if (sp.act === 'ascend') { B.ascend = T + 10; if (mine) { RPG.fly = T + 10; banner('Ascension !', 'Clic gauche : orbes sacrés'); } runeBurst(o[0], o[2], '#fff2b0');
-    fx.push({delay:10, run:() => { const p = rpgCasterPos(caster, o); circleFx(p.x, p.z, 6, 1.2); if (Math.hypot(me.x - p.x, me.z - p.z) < 7 && !me.dead) heal(20); }}); }
+  else if (sp.act === 'ascend') { const fd = modOf(caster, 'u_asc') ? 15 : 10; B.ascend = T + fd; if (mine) { RPG.fly = T + fd; banner('Ascension !', 'Clic gauche : orbes sacrés'); } runeBurst(o[0], o[2], '#fff2b0');
+    fx.push({delay:fd, run:() => { const p = rpgCasterPos(caster, o); circleFx(p.x, p.z, 6, 1.2); if (Math.hypot(me.x - p.x, me.z - p.z) < 7 && !me.dead) heal(20); }}); }
   else if (typeof necroCast === 'function') necroCast(data, caster, mine, sp, t, dmg, pot, big); }
 /* ---- soins des cercles de vie (chaque joueur se soigne lui-même) ---- */
 function circlesTick(dt){ const L = RPG.circles || []; for (let i = L.length - 1; i >= 0; i--) { const c = L[i]; if (T > c.t0 + c.dur) { L.splice(i, 1); continue; } synHealSummons(c.x, c.z, c.R, 6*c.pot*dt); if (!me.dead && Math.hypot(me.x - c.x, me.z - c.z) < c.R) { const h = 6*c.pot*dt; heal(h); if (c.mine) graceAdd(h); } } }

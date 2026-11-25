@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Construit index.html : tools/base.html (le jeu Incantatio Arena) + les modules src/*.js + les points d'accroche ci-dessous."""
 import glob, os, sys
-VERSION = 'v0.9 · 25/11'
+VERSION = 'v0.10 · 25/11'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 s = open(os.path.join(ROOT, 'tools/base.html')).read(); MISS = []; N = [0]
 def R(a, b, n=1):
@@ -38,11 +38,11 @@ R("d = allyDefend(d);", "d = allyDefend(d); d = rpgDefend(d);")
 R("STAFF.visible = !me.dead; staffUpdate(dt, mvg);", "STAFF.visible = !me.dead && me.cls !== 'glad'; staffUpdate(dt, mvg);")
 R("' / ' + me.maxMp + ' mana';", "' / ' + me.maxMp + (me.cls === 'glad' ? ' rage' : ' mana');")
 R("  if (!data || typeof data !== 'object') return;\n  if (data.sec)", "  if (!data || typeof data !== 'object') return; if (rpgPreApply(data, caster, mine)) return;\n  if (data.sec)")
-R("mons.delete(m.id); deathFx(m); W.k++;", "mons.delete(m.id); deathFx(m); W.k++; soulDrop(m);")
+R("mons.delete(m.id); deathFx(m); W.k++;", "mons.delete(m.id); deathFx(m); W.k++; soulDrop(m); lootDrop(m);")
 R("if (allyHitPlayer(peer, dmg)) return;", "if (allyHitPlayer(peer, dmg) || minHitPlayer(peer, dmg)) return;", 2)
 R("return allyTarget(m, t, tg, bd) || gpTarget(m, t, tg, bd); }", "return soulEaterTarget(m, t, tg, bd) || bossTarget(m, t, tg, bd) || allyTarget(m, t, tg, bd) || minTarget(m, t, tg, bd) || gpTarget(m, t, tg, bd); }")
-R("al:allyPack(),", "al:allyPack(), mn:minPack(),")
-R("allyRecv(D.al);", "allyRecv(D.al); minRecv(D.mn);")
+R("al:allyPack(),", "al:allyPack(), mn:minPack(), ex:EXP.tier,")
+R("allyRecv(D.al);", "allyRecv(D.al); minRecv(D.mn); if (fin(D.ex)) EXP.remote = D.ex;")
 R("if (f.aid) allyHurt(f.aid, Math.min(12, dmg*.15)); else", "if (f.aid) allyHurt(f.aid, Math.min(12, dmg*.15)); else if (f.nid) minHurt(f.nid, Math.min(12, dmg*.15)); else")
 R("const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i)).sort(", "const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i) && rpgOfferOk(i)).sort(")
 R("const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i)), other", "const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i) && rpgOfferOk(i)), other")
@@ -91,6 +91,8 @@ R("  g.userData = {body, L, R, LL, LR, eyes, glow, stone, aura, rocks, bar, bf, 
 R("function qSpawn(e){ const o = e && typeof e === 'object' ? e : {t:e}; if (!MT[o.t]) return;", "function qSpawn(e){ const o = e && typeof e === 'object' ? e : {t:e}; if (!MT[o.t]) return; o.t = rpgSpawnType(o.t);")
 R("function monsterMesh(t){ if (MT[t] && MT[t].phyl)", "function monsterMesh(t){ { const mm = typeof monModel === 'function' ? monModel(t) : null; if (mm) return mm; } if (MT[t] && MT[t].rpgMesh) return MT[t].rpgMesh(t); if (MT[t] && MT[t].phyl)")
 R('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>', '<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>\n<script src="vendor/GLTFLoader.js"></script>\n<script src="vendor/SkeletonUtils.js"></script>')
+R("* ddiff().hp;", "* ddiff().hp * (typeof expHp === 'function' ? expHp() : 1);")
+R("if (page === 5) { banner('Victoire !'", "if (page === 5) { if (typeof expVictory === 'function') expVictory(); banner('Victoire !'")
 R("<title>Incantatio Arena</title>", "<title>Incantatio RPG</title>")
 R("    <h1>Incantatio Arena</h1>", "    <h1>Incantatio RPG</h1>")
 R("Choisissez votre école de magie, entrez dans l'arène et <b>criez vos incantations dans le micro</b> : vos coéquipiers vous entendent pour de vrai. Farmez monstres et boss pour récupérer des parchemins et débloquer de nouveaux sorts, en coop ou chacun pour soi.", "Choisissez l'une des cinq classes, entrez dans l'arène et <b>criez vos formules dans le micro</b> (en anglais) : le clic gauche lance votre attaque de base, la voix lance vos sorts. En coop ou chacun pour soi.")

@@ -63,7 +63,7 @@ function rpgBasic(data){ const c = me.cls; if (c === 'elem') { data.bel = RPG.la
 /* ---- lancer : dispatch des comportements ---- */
 function rpgCast(data, caster, mine, sp, el, col){ const o = data.o, rk = fin(data.rk) ? data.rk : 1, pot = rk >= 2 ? 1.25 : 1, big = (rk >= 3 ? 1.25 : 1)*(fin(data.zk) ? clamp(data.zk, .5, 3) : 1), t = Array.isArray(data.t) && data.t.every(fin) ? data.t : [o[0], o[2]], dmg = sp.dmg*pot*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1)*(fin(data.q) ? clamp(data.q, .5, 1.3) : 1);
   if (typeof synElem === 'function' && sp.el) synElem(t, sp.el, caster);
-  if (sp.act === 'dragon') castDragon(o, data.d, sp, dmg, big, caster, data.sd | 0);
+  if (sp.act === 'dragon') { const u = modOf(caster, 'u_dragon'); castDragon(o, data.d, sp, dmg*(u ? 1.4 : 1), big, caster, data.sd | 0); if (u) fx.push({delay:.5, run:() => castDragon(o, data.d, sp, dmg*.7, big, caster, (data.sd | 0) + 7)}); }
   else if (sp.act === 'tri') { const P = Array.isArray(data.pts) && data.pts.length === 3 && data.pts.every(p => Array.isArray(p) && p.every(fin)) ? data.pts : null; if (P) castTri(P, dmg, big, caster); }
   else if (sp.act === 'prison') castPrison(t, sp, dmg, big, caster);
   else if (sp.act === 'tempest') castTempest(t, sp, dmg, big, caster, data.sd | 0);
