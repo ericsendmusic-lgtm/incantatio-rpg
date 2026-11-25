@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Construit index.html : tools/base.html (le jeu Incantatio Arena) + les modules src/*.js + les points d'accroche ci-dessous."""
 import glob, os, sys
-VERSION = 'v0.2 · 25/11'
+VERSION = 'v0.4 · 25/11'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 s = open(os.path.join(ROOT, 'tools/base.html')).read(); MISS = []; N = [0]
 def R(a, b, n=1):
@@ -14,7 +14,7 @@ R(ANCHOR, mods + ANCHOR)
 # --- points d'accroche dans le moteur existant ---
 R("({fire:'fire', storm:'storm', ice:'ice', spirit:'spirit', shadow:'shadow', summon:'spirit'})[cls] || 'arcane';", "((spellOf(sid) || {}).el || ({fire:'fire', storm:'storm', ice:'ice', spirit:'spirit', shadow:'shadow', summon:'spirit'})[cls] || (CL[cls] && CL[cls].el) || 'arcane');")
 R("function castOut(id){", "function castOut(id){ if (rpgPre(id)) return;")
-R("allyOut(id, data);", "allyOut(id, data); rpgData(id, data);")
+R("allyOut(id, data);", "allyOut(id, data); rpgData(id, data); progData(id, data);")
 R("el = ELEM(data.s, cls);", "el = data.s === 'basic' && ELC[data.bel] ? data.bel : ELEM(data.s, cls);")
 R("data.s === 'basic' ? (data.sb === 1 ? '#8fd8ff' : '#f3ead2')", "data.s === 'basic' ? (data.sb === 1 ? '#8fd8ff' : ELC[data.bel] || '#f3ead2')")
 R("if (sp.k === 'sum') { allyCast(data, caster, mine, sp); return; }", "if (sp.k === 'sum') { allyCast(data, caster, mine, sp); return; } if (sp.k === 'rpg') { rpgCast(data, caster, mine, sp, el, col); return; } if (data.s === 'basic' && rpgBasicCast(data, caster, mine, el, col)) return;")
@@ -37,6 +37,35 @@ R("me.vy -= 20*dt; let ny = me.y + me.vy*dt;", "me.vy -= 20*dt; let ny = rpgVert
 R("d = allyDefend(d);", "d = allyDefend(d); d = rpgDefend(d);")
 R("STAFF.visible = !me.dead; staffUpdate(dt, mvg);", "STAFF.visible = !me.dead && me.cls !== 'glad'; staffUpdate(dt, mvg);")
 R("' / ' + me.maxMp + ' mana';", "' / ' + me.maxMp + (me.cls === 'glad' ? ' rage' : ' mana');")
+R("  if (!data || typeof data !== 'object') return;\n  if (data.sec)", "  if (!data || typeof data !== 'object') return; if (rpgPreApply(data, caster, mine)) return;\n  if (data.sec)")
+R("mons.delete(m.id); deathFx(m); W.k++;", "mons.delete(m.id); deathFx(m); W.k++; soulDrop(m);")
+R("if (allyHitPlayer(peer, dmg)) return;", "if (allyHitPlayer(peer, dmg) || minHitPlayer(peer, dmg)) return;", 2)
+R("return allyTarget(m, t, tg, bd) || gpTarget(m, t, tg, bd); }", "return allyTarget(m, t, tg, bd) || minTarget(m, t, tg, bd) || gpTarget(m, t, tg, bd); }")
+R("al:allyPack(),", "al:allyPack(), mn:minPack(),")
+R("allyRecv(D.al);", "allyRecv(D.al); minRecv(D.mn);")
+R("if (f.aid) allyHurt(f.aid, Math.min(12, dmg*.15)); else", "if (f.aid) allyHurt(f.aid, Math.min(12, dmg*.15)); else if (f.nid) minHurt(f.nid, Math.min(12, dmg*.15)); else")
+R("const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i)).sort(", "const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i) && rpgOfferOk(i)).sort(")
+R("const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i)), other", "const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !known.includes(i) && rpgOfferOk(i)), other")
+R("cds[id] = now() + sp.cd;", "cds[id] = now() + sp.cd*rpgCdK(id);")
+R("const k = f.cat ? 1.4 : 1, x = m.x, z = m.z;", "const k = (f.cat ? 1.4 : 1)*(1 + modOf(by, 'rx')), x = m.x, z = m.z;")
+R("const mx = Math.round(220*allyWk());", "const mx = Math.round(220*allyWk()*(1 + modOf(o.peer, 'gHp')));")
+R("const dmg = 15*allyWk()*", "const dmg = 15*allyWk()*(1 + modOf(a.owner, 'gDmg'))*")
+R("spd = 5.2*(fury", "spd = 5.2*(1 + modOf(a.owner, 'gSpd'))*(fury")
+R("a.hp + a.max*.015*dt", "a.hp + a.max*.015*(1 + modOf(a.owner, 'gReg'))*dt")
+R("if (titan) { for (const m of [...mons.values()]) { const dd = Math.hypot(m.x - tg.x, m.z - tg.z); if (dd < 3.5", "if (titan || modOf(a.owner, 'gAoe')) { for (const m of [...mons.values()]) { const dd = Math.hypot(m.x - tg.x, m.z - tg.z); if (dd < (titan ? 3.5 : 2.5)")
+R("push:titan ? 3 : 1.2, aid:a.id};", "push:titan ? 3 : 1.2, aid:a.id, dot:modOf(a.owner, 'gFire') || modOf(a.owner, 'gCore') ? 6 : 0, slow:modOf(a.owner, 'gIce') || modOf(a.owner, 'gCore') ? 1.5 : 0};")
+R("pot = rk >= 2 ? 1.3 : 1, dur = rk >= 3 ? 1.5 : 1, a = allyOf(caster);", "pot = (rk >= 2 ? 1.3 : 1)*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1), dur = (rk >= 3 ? 1.5 : 1)*(fin(data.du) ? clamp(data.du, .5, 3) : 1), a = allyOf(caster);")
+R("const pool = BLESS.filter(b => !BL.has(b.id)), out = [];", "const pool = BLESS.filter(b => !BL.has(b.id) && rbOk(b)), out = [];")
+R("[60, 30, 10][b.r - 1]", "[60, 30, 12, 5][b.r - 1]")
+R("BLESS.filter(b => b.r >= 2 && !BL.has(b.id) && !out.includes(b))", "BLESS.filter(b => b.r >= 2 && !BL.has(b.id) && !out.includes(b) && rbOk(b))")
+R("const R = ['commune', 'rare', 'légendaire'];", "const R = rpgCls() ? RAR : ['commune', 'rare', 'légendaire'];")
+R("<small>${b.f} · ${R[b.r - 1]}</small><p>${esc(b.d)}</p>", "<small>${b.f} · ${R[b.r - 1]}</small><p>${esc(b.d)}${rbStack(b)}</p>")
+R("BL.add(b.id); archAdd('bless', b.id);", "BL.add(b.id); rbPick(b); archAdd('bless', b.id);")
+R("function treeOpen(){ const p = $('#tree');", "function treeOpen(){ if (rpgTreeOpen()) return; const p = $('#tree');")
+R("function comKill(by, sn, boss, type, champ){", "function comKill(by, sn, boss, type, champ){ rpgKill(by, boss, type, champ);")
+R("function chatCmd(v){", "function chatCmd(v){ if (playing && !/^\\/(aide|help|\\?|commandes)/i.test(v)) RPGP.cheat = 1;")
+R("function objOK(){ if (WV.objSt) return;", "function objOK(){ if (WV.objSt) return; xpGain(50, 'objectif');")
+R("function evtRecv(e){", "function evtRecv(e){ xpGain(20, 'événement');")
 R("<title>Incantatio Arena</title>", "<title>Incantatio RPG</title>")
 R("    <h1>Incantatio Arena</h1>", "    <h1>Incantatio RPG</h1>")
 R("Choisissez votre école de magie, entrez dans l'arène et <b>criez vos incantations dans le micro</b> : vos coéquipiers vous entendent pour de vrai. Farmez monstres et boss pour récupérer des parchemins et débloquer de nouveaux sorts, en coop ou chacun pour soi.", "Choisissez l'une des cinq classes, entrez dans l'arène et <b>criez vos formules dans le micro</b> (en anglais) : le clic gauche lance votre attaque de base, la voix lance vos sorts. En coop ou chacun pour soi.")

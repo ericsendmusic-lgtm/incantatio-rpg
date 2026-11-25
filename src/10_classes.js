@@ -52,6 +52,7 @@ function rpgPre(id){ const sp = spellOf(id); if (!sp || sp.act !== 'tri') return
   if (!RPG.tri) { RPG.tri = {id, pts:[], t:T + 6}; toast('Triangle d\'eau : visez et cliquez 3 points au sol (6 s)'); $('#bkhint').textContent = 'Triangle d\'eau : point 0/3'; } return true; }
 function rpgData(id, data){ const sp = spellOf(id); if (id === 'basic') { rpgBasic(data); return; } if (!sp) return; if (me.cls === 'elem' && sp.el) RPG.lastEl = sp.el;
   if (sp.k === 'rpg' || sp.k === 'sum') data.t = aimGround(34); if (sp.act === 'tri' && RPG.triDone) { data.pts = RPG.triDone.pts; RPG.triDone = null; }
+  if (typeof necroData === 'function') necroData(id, data);
   if (sp.act === 'shield') data.tg = aimAlly(30) || me.peer || 'me';
   if (sp.act === 'drain') data.ids = chainTargets(camera.position, aimDir(), 1);
   if (sp.act === 'rez') { let best = null, bd = 25; for (const [p, o] of others) if (o.dead) { const d = Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z); if (d < bd) { bd = d; best = p; } } if (best) data.rez = best; } }
@@ -60,7 +61,7 @@ function triTick(){ const P = RPG.tri; if (!P) return; if (T > P.t || me.dead) {
 /* ---- attaque de base par classe ---- */
 function rpgBasic(data){ const c = me.cls; if (c === 'elem') { data.bel = RPG.lastEl; data.bm = 1.35; } else if (c === 'necro') { data.bel = 'shadow'; data.bm = 1.2; } if (typeof rpgBasic2 === 'function') rpgBasic2(data); }
 /* ---- lancer : dispatch des comportements ---- */
-function rpgCast(data, caster, mine, sp, el, col){ const o = data.o, rk = fin(data.rk) ? data.rk : 1, pot = rk >= 2 ? 1.25 : 1, big = rk >= 3 ? 1.25 : 1, t = Array.isArray(data.t) && data.t.every(fin) ? data.t : [o[0], o[2]], dmg = sp.dmg*pot*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1)*(fin(data.q) ? clamp(data.q, .5, 1.3) : 1);
+function rpgCast(data, caster, mine, sp, el, col){ const o = data.o, rk = fin(data.rk) ? data.rk : 1, pot = rk >= 2 ? 1.25 : 1, big = (rk >= 3 ? 1.25 : 1)*(fin(data.zk) ? clamp(data.zk, .5, 3) : 1), t = Array.isArray(data.t) && data.t.every(fin) ? data.t : [o[0], o[2]], dmg = sp.dmg*pot*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1)*(fin(data.q) ? clamp(data.q, .5, 1.3) : 1);
   if (sp.act === 'dragon') castDragon(o, data.d, sp, dmg, big, caster, data.sd | 0);
   else if (sp.act === 'tri') { const P = Array.isArray(data.pts) && data.pts.length === 3 && data.pts.every(p => Array.isArray(p) && p.every(fin)) ? data.pts : null; if (P) castTri(P, dmg, big, caster); }
   else if (sp.act === 'prison') castPrison(t, sp, dmg, big, caster);
@@ -124,7 +125,7 @@ function prisonFx(id, dur){ const m = mons.get(id); if (!m) return; const g = ne
 function prisonTick(){ for (const [id, P] of RPG.prisons) { const m = mons.get(id); if (!m || T > P.t) { scene.remove(P.g); RPG.prisons.delete(id); if (m) puff(m.x, (m.gy || 0) + 1, m.z, '#e8fbff', 16, 5, .6, .6, 1); continue; } P.g.position.set(m.x, m.gy || groundH(m.x, m.z), m.z); } }
 function shatterFx(id){ const P = RPG.prisons.get(id), m = mons.get(id); if (P) { scene.remove(P.g); RPG.prisons.delete(id); } if (m) { const y = (m.gy || 0) + 1; puff(m.x, y, m.z, '#e8fbff', 40, 9, .7, .7, 1); iceSpikes(m.x, m.z, 1.5, 6); flash(m.x, y + 1, m.z, '#bfeaff', 5, .3); sfx('boom', .5); } }
 /* --- Tempête --- */
-function castTempest(t, sp, dmg, big, by, sd){ const R = sp.r*big, N = Math.round(sp.cnt*big), dur = N*.35; cloudFx(t[0], t[1], R, dur + .6);
+function castTempest(t, sp, dmg, big, by, sd){ const R = sp.r*big, N = Math.round(sp.cnt*big + modOf(by, 'cnt')), dur = N*.35; cloudFx(t[0], t[1], R, dur + .6);
   if (!isHost) return; for (let i = 0; i < N; i++) fx.push({delay:.4 + i*.35, run:() => { const C = [...mons.values()].filter(m => Math.hypot(m.x - t[0], m.z - t[1]) < R + MT[m.type].r && !MT[m.type].prop); let x = t[0] + (Math.random() - .5)*R, z = t[1] + (Math.random() - .5)*R;
     if (C.length) { C.sort((a, b) => (b.wetT > T) - (a.wetT > T) || Math.random() - .5); const m = C[0]; x = m.x; z = m.z; const wet = m.wetT > T || (m.mk && m.mk.el === 'water' && m.mk.t > T);
       hurt(m, dmg*(wet ? 1.6 : 1), fxEl('storm', sp.n, {slow:.6, rx:1}), 0, 0, by); if (wet) { W.hits.push(['qpop', 'Électrocution !']); for (const o of rxNear(m.x, m.z, 6).filter(o => o !== m).slice(0, 2)) { hurt(o, dmg*.4, fxEl('storm', 'Électrocution', {rx:1}), 0, 0, by); W.hits.push(['arc', r2(m.x), r2(m.z), r2(o.x), r2(o.z)]); arcFx(m.x, m.z, o.x, o.z); } } }
