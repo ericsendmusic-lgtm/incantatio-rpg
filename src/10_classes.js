@@ -17,8 +17,8 @@ CL.summon.spells = [
   {n:'Rise Guardian', k:'sum', act:'rise', dmg:0, mana:22, cd:15},
   {n:'Titan Fist', k:'sum', act:'fist', dmg:70, r:5, mana:24, cd:7},
   {n:'Spirit Armor', k:'sum', act:'skin', dmg:0, mana:22, cd:14},
-  {n:'Guardian Rage', k:'sum', act:'fury', dmg:0, mana:26, cd:16},
-  {n:'Titanic Leap', k:'sum', act:'smash', dmg:70, r:5.5, mana:30, cd:9},
+  {n:'Stone Fury', k:'sum', act:'fury', dmg:0, mana:26, cd:16},
+  {n:'Sky Crash', k:'sum', act:'smash', dmg:70, r:5.5, mana:30, cd:9},
   {n:'Ancestral Colossus', k:'sum', act:'titan', ult:1, dmg:0, mana:70, cd:75}];
 Object.assign(SUM_D, {fist:'Le golem frappe le sol : onde de choc, dégâts de zone, monstres repoussés', skin:'Armure spirituelle : le golem subit −50 % de dégâts 8 s, runes lumineuses, il attire les monstres', fury:'Rage du gardien : le golem frappe 40 % plus vite et 60 % plus fort pendant 10 s',
   smash:'Le golem fait un saut titanesque vers le point visé : dégâts de zone, monstres projetés et étourdis', titan:'ULTIME : le golem devient un colosse géant 20 s : plus grand, plus résistant (+50 % de vie), coups en zone', rise:'Rappelle le golem près de vous et lui rend la moitié de sa vie (ou le ressuscite à 60 %)'});
@@ -151,6 +151,7 @@ function apocSky(dur){ let e = $('#apocsky'); if (!e) { e = document.createEleme
 function rpgHurt(m, dmg, f, by){ if (dmg <= 0 || !f) return dmg; if (f.sn === 'Poings' && (m.stunT > T || m.ipT > T)) dmg *= 1.3;
   if (m.ipT > T && f.sn !== 'Ice Prison' && !f.ipx) { m.ipT = 0; m.stunT = 0; const bonus = (m.ipD || 30)*1.5; W.hits.push(['ishatter', m.id]); shatterFx(m.id); W.hits.push(['qpop', 'Prison brisée !']); if (by === me.peer || by === 'me') qPop('Prison brisée !', '#bfeaff');
     for (const o of rxNear(m.x, m.z, 3)) if (o !== m) hurt(o, bonus*.5, {el:'ice', sn:'Éclats de glace', ipx:1, rx:1}, 0, 0, m.ipBy); dmg += bonus; }
+  if (typeof contentHurt === 'function') dmg = contentHurt(m, dmg, f, by);
   if (typeof arenaHurt === 'function') dmg = arenaHurt(m, dmg, by);
   if (typeof rpgHurt2 === 'function') dmg = rpgHurt2(m, dmg, f, by); return dmg; }
 /* ---- Poing titan du golem ---- */

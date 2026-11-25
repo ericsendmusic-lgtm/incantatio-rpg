@@ -1,10 +1,10 @@
 /* ===================== GRANDES INCANTATIONS DE CLASSE (fin d'arbre), CALIBRAGE VOCAL, ANNEAUX DE RECHARGE ===================== */
 const CGRAND = {
   elem:{n:'Primordial Storm', steps:['Fire and Water', 'Ice and Thunder', 'Primordial Storm'], d:'Tempête primordiale : 7 s de météores, éclairs, glace et vagues sur une zone de 14 m ; tous les monstres touchés sont mouillés et étourdis 2 s'},
-  summon:{n:'Mountain Awakening', steps:['Stone Remember', 'Mountain Rise', 'Mountain Awakening'], d:'Le golem se réveille en colosse : vie pleine, invulnérable 8 s, forme de titan 20 s et séisme (80 dégâts, étourdissement 2 s, 12 m)'},
+  summon:{n:'Mountain Heart', steps:['Stone Remember', 'Earth Answer', 'Mountain Heart'], d:'Le golem se réveille en colosse : vie pleine, invulnérable 8 s, forme de titan 20 s et séisme (80 dégâts, étourdissement 2 s, 12 m)'},
   celest:{n:'Choir of Angels', steps:['Light Descend', 'Wings Unfold', 'Choir of Angels'], d:'Chœur des anges : soigne entièrement tous les alliés, relève les alliés tombés, bouclier de 60 pour chacun pendant 10 s'},
-  glad:{n:'Arena of Blood', steps:['Blood and Sand', 'Hear the Crowd', 'Arena of Blood'], d:'Arène de sang 15 s (10 m autour de vous) : les monstres dedans subissent +50 % de dégâts de tous, et vous volez 30 % de vos dégâts'},
-  necro:{n:'Night of the Dead', steps:['Graves Open', 'Darkness Calls', 'Night of the Dead'], d:'Nuit des morts : 6 morts-vivants temporaires se lèvent 25 s, et toute votre armée est soignée'}};
+  glad:{n:'Arena of Blood', steps:['Sand and Glory', 'Hear the Crowd', 'Arena of Blood'], d:'Arène de sang 15 s (10 m autour de vous) : les monstres dedans subissent +50 % de dégâts de tous, et vous volez 30 % de vos dégâts'},
+  necro:{n:'Endless Night', steps:['Coffins Break', 'Darkness Calls', 'Endless Night'], d:'Nuit des morts : 6 morts-vivants temporaires se lèvent 25 s, et toute votre armée est soignée'}};
 const CGRS = {step:0, t:0, cd:0};
 const grandOwned = c => !!progOf(c || me.cls).grand;
 function grandLock(c){ const P = progOf(c); if (P.grand) return 'Acquise'; if (P.lv < 30) return 'Niveau 30 requis'; if (progPts(c) < 3) return '3 points requis'; return ''; }
