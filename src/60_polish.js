@@ -54,6 +54,6 @@ function saveBoxHTML(){ return '<h4>Code de sauvegarde</h4><small>Copiez ce code
 addEventListener('click', e => { const t = e.target.closest && e.target.closest('button'); if (!t) return; if (t.classList.contains('rt-copy')) { const a = $('#rt-code'); a.select(); try { navigator.clipboard.writeText(a.value); } catch (er) { document.execCommand('copy'); } toast('Code copié'); }
   else if (t.classList.contains('rt-imp')) { const a = $('#rt-code'); if (progImport(a.value)) { toast('Progression importée'); const p = $('#tree'); if (p) p.innerHTML = rpgTreeHTML(TREE_C || pickCls); } else toast('Code invalide'); } }, true);
 /* ---- tick ---- */
-function polishTick(dt){ if (typeof grandTick2 === 'function') grandTick2(); if (typeof vfxTick === 'function') vfxTick(dt); if (typeof contentTick === 'function') contentTick(dt); ultUI(); ctutoTick(dt); if (playing && rpgCls() && !me.dead && W.st === 'fight') ultAdd(.45*dt); if (!playing) RPG.ult = 0;
+function polishTick(dt){ if (typeof grandTick2 === 'function') grandTick2(); if (typeof vfxTick === 'function') vfxTick(dt); if (typeof contentTick === 'function') contentTick(dt); if (typeof mdlTick === 'function') mdlTick(); ultUI(); ctutoTick(dt); if (playing && rpgCls() && !me.dead && W.st === 'fight') ultAdd(.45*dt); if (!playing) RPG.ult = 0;
   const g = $('#gparch'); if (g && g.closest('label')) { g.closest('label').style.display = 'none'; if (typeof GP !== 'undefined') GP.arch = 'sorcier'; }
   for (const id of ['allyui', 'necroui']) { const e = $('#' + id); if (e) e.style.bottom = '140px'; } }

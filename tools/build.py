@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Construit index.html : tools/base.html (le jeu Incantatio Arena) + les modules src/*.js + les points d'accroche ci-dessous."""
 import glob, os, sys
-VERSION = 'v0.8.1 · 25/11'
+VERSION = 'v0.9 · 25/11'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 s = open(os.path.join(ROOT, 'tools/base.html')).read(); MISS = []; N = [0]
 def R(a, b, n=1):
@@ -70,7 +70,7 @@ R("Math.min(100, me.hp", "Math.min(rpgMaxHp(), me.hp", 3)
 R("me.hp = 100", "me.hp = rpgMaxHp()", 2)
 R("$('#hpb').style.width = me.hp + '%'; $('#hpt').textContent = Math.ceil(me.hp) + ' PV';", "$('#hpb').style.width = (me.hp/rpgMaxHp()*100) + '%'; $('#hpt').textContent = Math.ceil(me.hp) + (rpgMaxHp() !== 100 ? ' / ' + rpgMaxHp() : '') + ' PV';")
 R("${rbStack(b)}</p></div>`).join('') + '</div><small class=", "${rbStack(b)}</p></div>`).join('') + '</div>' + rpgStatsHTML() + '<small class=")
-R("function wizardMesh(cls, name){", "function wizardMesh(cls, name){ if (cls === 'glad' && typeof gladMesh === 'function') return gladMesh(name); if (!wizardMesh.inner && typeof classDecor === 'function') { wizardMesh.inner = 1; let g; try { g = wizardMesh(cls, name); } finally { wizardMesh.inner = 0; } classDecor(cls, g); return g; }")
+R("function wizardMesh(cls, name){", "function wizardMesh(cls, name){ if (!wizardMesh.inner && typeof playerModel === 'function') { const pm = playerModel(cls, name); if (pm) { if (cls !== 'glad') classDecor(cls, pm); return pm; } } if (cls === 'glad' && typeof gladMesh === 'function') return gladMesh(name); if (!wizardMesh.inner && typeof classDecor === 'function') { wizardMesh.inner = 1; let g; try { g = wizardMesh(cls, name); } finally { wizardMesh.inner = 0; } classDecor(cls, g); return g; }")
 R("| (a.mv ? 32 : 0)", "| (a.mv ? 32 : 0) | (a.fireT > T ? 64 : 0) | (a.iceT > T ? 128 : 0) | (a.stormT > T ? 256 : 0)", 2)
 R("const gc = fl & 4 ? 0xff5a2a :", "const gc = fl & 64 ? 0xff8a2a : fl & 128 ? 0x9fe8ff : fl & 256 ? 0xffe259 : fl & 4 ? 0xff5a2a :")
 R("a.atk = 1.3/(fury ? 1.4 : 1);", "a.atk = 1.3/(fury ? 1.4 : 1)/(a.stormT > T ? 1.3 : 1);")
@@ -89,7 +89,8 @@ R("const stone = bmat('boss_golem', 1, 1, {c:0x8fa6bc, ns:1.6, rim:.35}), dark =
 R("U.stone.color.setHex(fl & 2 ? 0xd8c090 : 0x8fa6bc);", "U.stone.color.setHex(fl & 2 ? 0xe8d0a0 : 0xb0b8c8);")
 R("  g.userData = {body, L, R, LL, LR, eyes, glow, stone, aura, rocks, bar, bf, lk, ph:0, sc:1};", "  golemDecor(body, M, glow, stone);\n  g.userData = {body, L, R, LL, LR, eyes, glow, stone, aura, rocks, bar, bf, lk, ph:0, sc:1};")
 R("function qSpawn(e){ const o = e && typeof e === 'object' ? e : {t:e}; if (!MT[o.t]) return;", "function qSpawn(e){ const o = e && typeof e === 'object' ? e : {t:e}; if (!MT[o.t]) return; o.t = rpgSpawnType(o.t);")
-R("function monsterMesh(t){ if (MT[t] && MT[t].phyl)", "function monsterMesh(t){ if (MT[t] && MT[t].rpgMesh) return MT[t].rpgMesh(t); if (MT[t] && MT[t].phyl)")
+R("function monsterMesh(t){ if (MT[t] && MT[t].phyl)", "function monsterMesh(t){ { const mm = typeof monModel === 'function' ? monModel(t) : null; if (mm) return mm; } if (MT[t] && MT[t].rpgMesh) return MT[t].rpgMesh(t); if (MT[t] && MT[t].phyl)")
+R('<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>', '<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>\n<script src="vendor/GLTFLoader.js"></script>\n<script src="vendor/SkeletonUtils.js"></script>')
 R("<title>Incantatio Arena</title>", "<title>Incantatio RPG</title>")
 R("    <h1>Incantatio Arena</h1>", "    <h1>Incantatio RPG</h1>")
 R("Choisissez votre école de magie, entrez dans l'arène et <b>criez vos incantations dans le micro</b> : vos coéquipiers vous entendent pour de vrai. Farmez monstres et boss pour récupérer des parchemins et débloquer de nouveaux sorts, en coop ou chacun pour soi.", "Choisissez l'une des cinq classes, entrez dans l'arène et <b>criez vos formules dans le micro</b> (en anglais) : le clic gauche lance votre attaque de base, la voix lance vos sorts. En coop ou chacun pour soi.")

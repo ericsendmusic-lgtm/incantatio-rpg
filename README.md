@@ -33,3 +33,4 @@ Arène de magie vocale à cinq classes, construite sur Incantatio Arena. Le clic
 - `src/*.js` : les modules RPG (classes, sorts, invocations, progression), insérés dans l'ordre de leur nom.
 - `tools/build.py` : assemble `index.html` à partir de la base, des modules et des points d'accroche listés dans le script. Lancer `python3 tools/build.py` après chaque modification.
 - `tex/`, `vosk/` : textures et modèle de reconnaissance vocale.
+- `models/` : personnages et squelettes animés **KayKit** (Kay Lousberg, licence CC0, voir les fichiers LICENSE dans le dossier). `vendor/` : GLTFLoader et SkeletonUtils de three.js r128 (licence MIT).

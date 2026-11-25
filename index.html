@@ -276,6 +276,8 @@ button{cursor:pointer}
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/RGBELoader.js"></script>
+<script src="vendor/GLTFLoader.js"></script>
+<script src="vendor/SkeletonUtils.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 {
@@ -2077,7 +2079,7 @@ function wavesQuality(id, Q){ if (hasPact('murmure') && !Q.perfect) Q.q *= .6; }
 function riseTarget(){ if (me.dead || !room) return null; for (const [p, o] of others) if (o.dead && Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) < 3.5) return p; return null; }
 const riseNear = () => !!riseTarget();
 const GAME_VER = 'v2.5.2 · 25/11 golem';
-{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.8.1 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
+{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.9 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
 function riseStart(){ const p = riseTarget(); if (!p) return false; WV.rise = {peer:p, t:3}; toast('Résurrection : restez près de son âme 3 s'); return true; }
 function riseVoice(n){ if (/guard/.test(n)) return false; if (!/\b(rise|rice|rize|raise|rais)\b/.test(n)) return false; return riseStart(); }
 function riseTick(dt){ const R = WV.rise; if (!R) return; const o = others.get(R.peer); if (!o || !o.dead || me.dead || Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) > 3.8) { WV.rise = null; toast('Résurrection interrompue'); return; }
@@ -3308,7 +3310,7 @@ function saveBoxHTML(){ return '<h4>Code de sauvegarde</h4><small>Copiez ce code
 addEventListener('click', e => { const t = e.target.closest && e.target.closest('button'); if (!t) return; if (t.classList.contains('rt-copy')) { const a = $('#rt-code'); a.select(); try { navigator.clipboard.writeText(a.value); } catch (er) { document.execCommand('copy'); } toast('Code copié'); }
   else if (t.classList.contains('rt-imp')) { const a = $('#rt-code'); if (progImport(a.value)) { toast('Progression importée'); const p = $('#tree'); if (p) p.innerHTML = rpgTreeHTML(TREE_C || pickCls); } else toast('Code invalide'); } }, true);
 /* ---- tick ---- */
-function polishTick(dt){ if (typeof grandTick2 === 'function') grandTick2(); if (typeof vfxTick === 'function') vfxTick(dt); if (typeof contentTick === 'function') contentTick(dt); ultUI(); ctutoTick(dt); if (playing && rpgCls() && !me.dead && W.st === 'fight') ultAdd(.45*dt); if (!playing) RPG.ult = 0;
+function polishTick(dt){ if (typeof grandTick2 === 'function') grandTick2(); if (typeof vfxTick === 'function') vfxTick(dt); if (typeof contentTick === 'function') contentTick(dt); if (typeof mdlTick === 'function') mdlTick(); ultUI(); ctutoTick(dt); if (playing && rpgCls() && !me.dead && W.st === 'fight') ultAdd(.45*dt); if (!playing) RPG.ult = 0;
   const g = $('#gparch'); if (g && g.closest('label')) { g.closest('label').style.display = 'none'; if (typeof GP !== 'undefined') GP.arch = 'sorcier'; }
   for (const id of ['allyui', 'necroui']) { const e = $('#' + id); if (e) e.style.bottom = '140px'; } }
 
@@ -3389,7 +3391,7 @@ function golemDecor(body, M, glow, stone){ const cry = new THREE.MeshStandardMat
 function classDecor(cls, g){ if (!g || !CL[cls] || !CL[cls].rpg) return; const col = new THREE.Color(CL[cls].col), add = (m, x, y, z) => { m.position.set(x, y, z); g.add(m); return m; };
   if (cls === 'celest') { const w = wingsBuild(); w.scale.setScalar(1.15); w.position.set(0, 1.5, -.18); w.children.forEach(x => { x.rotation.y = x.userData.s*1.35; x.rotation.z = x.userData.s*.5; }); w.userData.folded = 1; g.add(w); g.userData.fold = w;
     add(new THREE.Mesh(new THREE.TorusGeometry(.17, .022, 8, 32).rotateX(Math.PI/2), new THREE.MeshBasicMaterial({color:0xffe9a8})), 0, 2.22, 0); }
-  else if (cls === 'necro') { const cloth = new THREE.MeshStandardMaterial({color:0x1a1424, roughness:.95, side:THREE.DoubleSide}); add(new THREE.Mesh(new THREE.ConeGeometry(.24, .5, 14, 1, true), cloth), 0, 2.02, -.03);
+  else if (cls === 'necro' && !g.userData.model) { const cloth = new THREE.MeshStandardMaterial({color:0x1a1424, roughness:.95, side:THREE.DoubleSide}); add(new THREE.Mesh(new THREE.ConeGeometry(.24, .5, 14, 1, true), cloth), 0, 2.02, -.03);
     add(new THREE.Mesh(new THREE.SphereGeometry(.2, 14, 10, 0, 6.28, 0, 1.6), cloth), 0, 1.86, -.02); const sc = new THREE.Group(); sc.position.set(.15, 1.3, -.3); sc.rotation.set(.2, 0, -.5); g.add(sc);
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(.025, .03, 2, 8), new THREE.MeshStandardMaterial({color:0x2a1a14, roughness:.8})); sc.add(pole); const bl = new THREE.Shape(); bl.moveTo(0, 0); bl.quadraticCurveTo(.5, .25, .85, -.25); bl.quadraticCurveTo(.45, 0, 0, -.12); const blade = new THREE.Mesh(new THREE.ShapeGeometry(bl), new THREE.MeshStandardMaterial({color:0xb8c0c8, metalness:.9, roughness:.25, side:THREE.DoubleSide})); blade.position.y = .95; sc.add(blade);
     for (let i = 0; i < 3; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({map:dotTex, color:0x7dff9c, transparent:true, opacity:.6, blending:THREE.AdditiveBlending, depthWrite:false})); s.scale.setScalar(.25); g.add(s); (g.userData.wisps = g.userData.wisps || []).push(s); } }
@@ -3483,6 +3485,53 @@ function skinTick(){ if (!playing) return; const myc = skinColorFor(me.peer, me.
   if (myc) { if (me.cls === 'glad' && FIST && !(bOn(me.peer, 'berserk') || bOn(me.peer, 'apex') || bOn(me.peer, 'blood'))) FIST.userData.rm.color.setHex(myc); if (WINGS) WINGS.children.forEach(w => w.material.color.setHex(myc)); }
   for (const n of NC.mins.values()) { const c = skinColorFor(n.owner === 'me' ? me.peer : n.owner, 'necro'); if (c && n.g && n.g.userData.aura && !(n.fl || 0)) n.g.userData.aura.material.color.setHex(c); } }
 function contentTick(dt){ bossReact(dt); skinTick(); }
+
+/* ===================== MODÈLES 3D ANIMÉS (KayKit, licence CC0) : personnages des 5 classes et squelettes =====================
+   Chargés au démarrage depuis models/. Tant qu'un modèle n'est pas prêt, l'ancien modèle reste affiché, puis il est remplacé. */
+const MDL = {list:{mage:'models/Mage.glb', barb:'models/Barbarian.glb', rogueH:'models/Rogue_Hooded.glb', knight:'models/Knight.glb', rogue:'models/Rogue.glb', skRogue:'models/Skeleton_Rogue.glb', skWar:'models/Skeleton_Warrior.glb', skMin:'models/Skeleton_Minion.glb',
+  crossbow:'models/props/Skeleton_Crossbow.gltf', shield:'models/props/Skeleton_Shield_Large_A.gltf', blade:'models/props/Skeleton_Blade.gltf', skStaff:'models/props/Skeleton_Staff.gltf'}, g:{}, h:{}, err:{}};
+const mdlReady = k => !!MDL.g[k];
+(function mdlLoad(){ if (!THREE.GLTFLoader || !THREE.SkeletonUtils) { console.warn('GLTFLoader absent : modèles 3D désactivés'); return; } const L = new THREE.GLTFLoader();
+  for (const [k, url] of Object.entries(MDL.list)) L.load(url, gl => { gl.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } }); const b = new THREE.Box3().setFromObject(gl.scene); MDL.h[k] = Math.max(.1, b.max.y - b.min.y); MDL.g[k] = gl; }, undefined, e => { MDL.err[k] = 1; console.warn('modèle ' + k + ' introuvable', e); }); })();
+/* une instance animée : clone du squelette, matériaux teintés, actions par nom */
+function mdlInst(k, opt){ opt = opt || {}; const G = MDL.g[k], root = THREE.SkeletonUtils.clone(G.scene), mixer = new THREE.AnimationMixer(root), clips = {}; for (const c of G.animations) clips[c.name] = c;
+  const keep = opt.show ? new Set(opt.show) : null, hide = new Set(opt.hide || []);
+  root.traverse(o => { if (o.isMesh || o.isSkinnedMesh) { if (hide.has(o.name) || (keep && !keep.has(o.name) && o.name !== '' && !/Body|Arm|Leg|Head|Eyes|Jaw|Skull/.test(o.name))) o.visible = false;
+      const ms = (Array.isArray(o.material) ? o.material : [o.material]).map(m => { const c = m.clone(); if (opt.tint) c.color.multiply(new THREE.Color(opt.tint)); if (opt.em) { c.emissive = new THREE.Color(opt.em); c.emissiveIntensity = opt.ei || .25; } c.envMapIntensity = .5; return c; }); o.material = Array.isArray(o.material) ? ms : ms[0]; } });
+  root.scale.setScalar((opt.h || 1.9)/(MDL.h[k] || 2)); root.rotation.y = opt.ry || 0;
+  const I = {root, mixer, cur:null, curN:'', lock:0};
+  I.play = (name, o2) => { o2 = o2 || {}; const c = clips[name]; if (!c) return; if (I.curN === name && !o2.restart) return; const a = mixer.clipAction(c); a.reset(); a.setEffectiveTimeScale(o2.speed || 1); if (o2.once) { a.setLoop(THREE.LoopOnce, 1); a.clampWhenFinished = true; I.lock = o2.hold ? 1e9 : c.duration/(o2.speed || 1)*.85; } else a.setLoop(THREE.LoopRepeat, Infinity);
+    a.play(); if (I.cur && I.cur !== a) I.cur.crossFadeTo(a, o2.fade ?? .18, false); I.cur = a; I.curN = name; };
+  I.attach = (bone, propKey, s, pos, rot) => { const b = root.getObjectByName(bone); if (!b || !mdlReady(propKey)) return null; const p = MDL.g[propKey].scene.clone(true); p.traverse(o => { if (o.isMesh) { o.castShadow = true; o.frustumCulled = false; } }); if (s) p.scale.setScalar(s); if (pos) p.position.set(...pos); if (rot) p.rotation.set(...rot); b.add(p); return p; };
+  I.upd = dt => { I.lock = Math.max(0, I.lock - dt); mixer.update(dt); };
+  return I; }
+/* ---- joueurs des 5 classes ---- */
+const CLS_MDL = {elem:{k:'mage', hide:['Spellbook', 'Spellbook_open', '1H_Wand'], tint:0xffffff},
+  summon:{k:'rogue', hide:['Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable'], tint:0xd0e4ff, staff:1},
+  celest:{k:'knight', hide:['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword'], tint:0xfff4dc, em:0x6a5020, ei:.2},
+  glad:{k:'barb', hide:['1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug'], tint:0xffffff},
+  necro:{k:'rogueH', hide:['Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable'], tint:0x5a4c70, staff:1}};
+function playerModel(cls, name){ const D = CLS_MDL[cls]; if (!D || !mdlReady(D.k)) return null; const g = new THREE.Group(), I = mdlInst(D.k, {hide:D.hide, tint:D.tint, em:D.em, ei:D.ei, h:1.95, ry:Math.PI}); g.add(I.root);
+  if (D.staff) I.attach('handslot.r', 'skStaff', 1, [0, 0, 0], [0, 0, 0]);
+  const col = new THREE.Color(CL[cls].col), lb = label(name, '#' + col.getHexString()); lb.position.y = 2.45; g.add(lb); g.userData.lb = lb;
+  const S = {lx:null, lz:null, mv:0, hp:100, dead:false, side:0}; const glad = cls === 'glad', idle = glad ? 'Unarmed_Idle' : 'Idle';
+  g.userData.model = I; I.play(idle);
+  g.userData.cast = () => { if (S.dead) return; if (glad) { S.side ^= 1; I.play(S.side ? 'Unarmed_Melee_Attack_Punch_A' : 'Unarmed_Melee_Attack_Punch_B', {once:1, restart:1, speed:1.4, fade:.08}); } else I.play('Spellcast_Shoot', {once:1, restart:1, speed:1.3, fade:.1}); };
+  g.userData.upd = (dt, o) => { if (S.lx === null) { S.lx = g.position.x; S.lz = g.position.z; } const sp = Math.hypot(g.position.x - S.lx, g.position.z - S.lz)/Math.max(dt, 1e-3); S.lx = g.position.x; S.lz = g.position.z; S.mv += (clamp(sp/5.5, 0, 1.6) - S.mv)*Math.min(1, dt*8);
+    if (o.dead && !S.dead) { S.dead = true; I.play('Death_A', {once:1, hold:1, fade:.1}); } else if (!o.dead && S.dead) { S.dead = false; I.lock = 0; I.play(idle, {restart:1}); }
+    if (!S.dead) { if (o.hp < S.hp - .5 && !I.lock) I.play('Hit_A', {once:1, restart:1, speed:1.4, fade:.08}); let fly = false; for (const [p, ot] of others) if (ot.g === g && bOn(p, 'ascend')) fly = true;
+      if (!I.lock) I.play(fly ? 'Jump_Idle' : S.mv > .75 ? 'Running_A' : S.mv > .12 ? 'Walking_A' : idle); }
+    S.hp = o.hp; I.upd(dt); g.visible = true; };
+  scene.add(g); return g; }
+/* ---- monstres squelettes ---- */
+const MON_MDL = {6:{k:'skRogue', atk:'1H_Ranged_Shoot', prop:['handslot.r', 'crossbow']}, [MT_ARM]:{k:'skWar', atk:'1H_Melee_Attack_Chop', prop:['handslot.r', 'blade'], prop2:['handslot.l', 'shield']}};
+function monModel(t){ const D = MON_MDL[t]; if (!D || !mdlReady(D.k)) return null; const g = new THREE.Group(), body = new THREE.Group(); g.add(body); const I = mdlInst(D.k, {h:MT[t].h*1.05, ry:0}); body.add(I.root);
+  if (D.prop) I.attach(D.prop[0], D.prop[1], 1); if (D.prop2) I.attach(D.prop2[0], D.prop2[1], 1);
+  const b = bar3(); b.position.y = MT[t].h + .45; g.add(b); g.userData.bar = b; g.userData.body = body; g.userData.bs = 1; g.userData.noSquash = 1; g.userData.model = I; I.play('Idle');
+  let lt = null; g.userData.anim = (tt, mv, atk, fl) => { const dt = lt === null ? .016 : clamp(tt - lt, 0, .1); lt = tt; if (atk > .9 && !I.lock) I.play(D.atk, {once:1, restart:1, speed:1.3, fade:.08}); else if (!I.lock) I.play(mv > .6 ? 'Running_A' : mv > .1 ? 'Walking_A' : 'Idle'); I.upd(dt); };
+  scene.add(g); return g; }
+/* ---- remplacement des anciens modèles dès que les nouveaux sont prêts ---- */
+function mdlTick(){ for (const [p, o] of others) { if (!o.g || o.g.userData.model || !CLS_MDL[o.cls] || !mdlReady(CLS_MDL[o.cls].k)) continue; const old = o.g, ng = wizardMesh(o.cls, o.name); if (!ng || !ng.userData.model) continue; ng.position.copy(old.position); ng.rotation.copy(old.rotation); scene.remove(old); o.g = ng; } }
 
 /* ===================== ARÈNE VIVANTE : biomes, transformations, dangers, destruction ===================== */
 /* Le biome se déduit de la vague (identique chez tous les joueurs, sans message réseau) ; la transformation dure 12 s pendant la pause entre deux vagues.
@@ -3707,7 +3756,7 @@ TUFTS.material.onBeforeCompile = sh => { sh.uniforms.uT = WIND; sh.vertexShader 
 function label(text, col){ const t = canvasTex(256, 64, (g) => { g.font = 'bold 30px Cinzel, Georgia, serif'; g.textAlign = 'center'; g.lineWidth = 6; g.strokeStyle = 'rgba(0,0,0,.8)'; g.strokeText(text, 128, 42); g.fillStyle = col; g.fillText(text, 128, 42); }); const s = new THREE.Sprite(new THREE.SpriteMaterial({map:t, depthWrite:false, transparent:true})); s.scale.set(3,.75,1); return s; }
 /* ---------------- LE MAGE (vu par les autres joueurs) : sculpté, animé, propre à chaque école ---------------- */
 const WZ_STYLE = {fire:{hat:1, trim:0xc9a24a, pad:0x6a1a0c}, ice:{hat:1, trim:0xc8d8e8, pad:0x2a4a6a}, storm:{hat:1, trim:0xd8b25a, pad:0x3a3a52}, spirit:{hat:0, trim:0xe0c8ff, pad:0x4a2a6a}, shadow:{hat:0, trim:0x7a8a70, pad:0x16201a}};
-function wizardMesh(cls, name){ if (cls === 'glad' && typeof gladMesh === 'function') return gladMesh(name); if (!wizardMesh.inner && typeof classDecor === 'function') { wizardMesh.inner = 1; let g; try { g = wizardMesh(cls, name); } finally { wizardMesh.inner = 0; } classDecor(cls, g); return g; }
+function wizardMesh(cls, name){ if (!wizardMesh.inner && typeof playerModel === 'function') { const pm = playerModel(cls, name); if (pm) { if (cls !== 'glad') classDecor(cls, pm); return pm; } } if (cls === 'glad' && typeof gladMesh === 'function') return gladMesh(name); if (!wizardMesh.inner && typeof classDecor === 'function') { wizardMesh.inner = 1; let g; try { g = wizardMesh(cls, name); } finally { wizardMesh.inner = 0; } classDecor(cls, g); return g; }
   const C = CL[cls] ? cls : 'fire', st = WZ_STYLE[C], col = new THREE.Color(CL[C].col), g = new THREE.Group(), body = new THREE.Group(); body.rotation.y = Math.PI; g.add(body);
   const U = {uT:SPU.uT, uMv:{value:0}};
   /* robe : plis, ourlet qui flotte et traîne en mouvement (vertex shader) */
@@ -3809,7 +3858,7 @@ function wizardMesh(cls, name){ if (cls === 'glad' && typeof gladMesh === 'funct
 }
 const bar3 = () => { const g = new THREE.Group(); const bg = new THREE.Mesh(geo('hb', () => new THREE.PlaneGeometry(1.2,.13)), MATS.hbb || (MATS.hbb = new THREE.MeshBasicMaterial({color:0x000000, transparent:true, opacity:.6, depthWrite:false}))); const fg = new THREE.Mesh(geo('hb', () => new THREE.PlaneGeometry(1.2,.13)), MATS.hbf || (MATS.hbf = new THREE.MeshBasicMaterial({color:0xe2443b, depthWrite:false}))); fg.position.z = .01; g.add(bg, fg); g.userData.fg = fg; return g; };
 /* each monster is a small rig of parts; anim(t, move, atk) animates it */
-function monsterMesh(t){ if (MT[t] && MT[t].rpgMesh) return MT[t].rpgMesh(t); if (MT[t] && MT[t].phyl) return phylMesh(); if (MT[t] && MT[t].prop) return propMesh(t);
+function monsterMesh(t){ { const mm = typeof monModel === 'function' ? monModel(t) : null; if (mm) return mm; } if (MT[t] && MT[t].rpgMesh) return MT[t].rpgMesh(t); if (MT[t] && MT[t].phyl) return phylMesh(); if (MT[t] && MT[t].prop) return propMesh(t);
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
   let nP = 0; const P = (k, f, m, x, y, z, parent) => { const o = new THREE.Mesh(geo(k, f), m); o.position.set(x || 0, y || 0, z || 0); o.castShadow = nP++ < 3; (parent || body).add(o); return o; };
   const pivot = (x, y, z, parent) => { const p = new THREE.Group(); p.position.set(x, y, z); (parent || body).add(p); return p; };
