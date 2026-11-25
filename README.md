@@ -10,8 +10,8 @@ Arène de magie vocale à cinq classes, construite sur Incantatio Arena. Le clic
 |---|---|---|---|
 | Mage élémentaire | Dégâts de zone, réactions | Fire Dragon · Water Triangle · Ice Prison · Tempest · ★ Elemental Apocalypse | jouable |
 | Mage invocateur | Golem gardien | Rise Guardian · Titan Fist · Spirit Armor · Guardian Rage · Titanic Leap · ★ Ancestral Colossus | jouable |
-| Mage céleste | Soins, drain, vol | — | en préparation |
-| Gladiateur runique | Corps à corps, runes | — | en préparation |
+| Mage céleste | Soins, drain, vol | Circle of Life · Divine Shield · Resurrection · Life Drain · ★ Ascension | jouable |
+| Gladiateur runique | Corps à corps, runes, Rage | Gladiator Leap · Seismic Fist · Blood Rune · Berserker · ★ Gladiator Apex | jouable |
 | Nécromancien | Armée d'âmes | — | en préparation |
 
 ## Organisation du code

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Construit index.html : tools/base.html (le jeu Incantatio Arena) + les modules src/*.js + les points d'accroche ci-dessous."""
 import glob, os, sys
-VERSION = 'v0.1 · 25/11'
+VERSION = 'v0.2 · 25/11'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 s = open(os.path.join(ROOT, 'tools/base.html')).read(); MISS = []; N = [0]
 def R(a, b, n=1):
@@ -17,7 +17,7 @@ R("function castOut(id){", "function castOut(id){ if (rpgPre(id)) return;")
 R("allyOut(id, data);", "allyOut(id, data); rpgData(id, data);")
 R("el = ELEM(data.s, cls);", "el = data.s === 'basic' && ELC[data.bel] ? data.bel : ELEM(data.s, cls);")
 R("data.s === 'basic' ? (data.sb === 1 ? '#8fd8ff' : '#f3ead2')", "data.s === 'basic' ? (data.sb === 1 ? '#8fd8ff' : ELC[data.bel] || '#f3ead2')")
-R("if (sp.k === 'sum') { allyCast(data, caster, mine, sp); return; }", "if (sp.k === 'sum') { allyCast(data, caster, mine, sp); return; } if (sp.k === 'rpg') { rpgCast(data, caster, mine, sp, el, col); return; }")
+R("if (sp.k === 'sum') { allyCast(data, caster, mine, sp); return; }", "if (sp.k === 'sum') { allyCast(data, caster, mine, sp); return; } if (sp.k === 'rpg') { rpgCast(data, caster, mine, sp, el, col); return; } if (data.s === 'basic' && rpgBasicCast(data, caster, mine, el, col)) return;")
 R("if (e.button === 0 && !me.dead && !hasB('mains')", "if (e.button === 0 && rpgClick()) return; if (e.button === 0 && !me.dead && !hasB('mains')")
 R("function hurt(m, dmg, f, px, pz, by){", "function hurt(m, dmg, f, px, pz, by){ dmg = rpgHurt(m, dmg, f, by);")
 R("rxFx(key, x, z, by); W.hits.push(['rx', key, r2(x), r2(z), by || '']);\n  switch (key) {", "rxFx(key, x, z, by); W.hits.push(['rx', key, r2(x), r2(z), by || '']); if (rpgReact(key, m, x, z, by, k)) return;\n  switch (key) {")
@@ -30,6 +30,13 @@ R("else if (act === 'smash') {", "else if (act === 'fist') rpgFist(g, sp, pot, c
 R("else if (act === 'titan') g.titanT = T + 20*dur;", "else if (act === 'titan') { g.titanT = T + 20*dur; g.hp = Math.min(g.max*1.5, g.hp + g.max*.5); }")
 R("sum:(SUM_D[sp.act] || 'Gardien')}", "sum:(SUM_D[sp.act] || 'Gardien'),rpg:(sp.d || '')}")
 R("  $('#classes').innerHTML = Object.entries(CL).map(([k, c]) => `<button class=\"cls\" data-c=\"${k}\" style=\"--c:${c.col}\" aria-pressed=\"${k === pickCls}\" title=", "  if (0) $('#classes').innerHTML = Object.entries(CL).map(([k, c]) => `<button class=\"cls\" data-c=\"${k}\" style=\"--c:${c.col}\" aria-pressed=\"${k === pickCls}\" title=")
+R("if (wavesTry(id)) return;", "if (wavesTry(id) || rpgBlock(id)) return;")
+R("const sp = 5.5 /* plus de sprint */", "const sp = 5.5*rpgSpeed() /* plus de sprint */")
+R("me.mp = Math.min(me.maxMp, me.mp + 1.5*dt);", "me.mp = Math.min(me.maxMp, me.mp + 1.5*dt*rpgRegen());")
+R("me.vy -= 20*dt; let ny = me.y + me.vy*dt;", "me.vy -= 20*dt; let ny = rpgVert(me.y + me.vy*dt, gh, dt);")
+R("d = allyDefend(d);", "d = allyDefend(d); d = rpgDefend(d);")
+R("STAFF.visible = !me.dead; staffUpdate(dt, mvg);", "STAFF.visible = !me.dead && me.cls !== 'glad'; staffUpdate(dt, mvg);")
+R("' / ' + me.maxMp + ' mana';", "' / ' + me.maxMp + (me.cls === 'glad' ? ' rage' : ' mana');")
 R("<title>Incantatio Arena</title>", "<title>Incantatio RPG</title>")
 R("    <h1>Incantatio Arena</h1>", "    <h1>Incantatio RPG</h1>")
 R("Choisissez votre école de magie, entrez dans l'arène et <b>criez vos incantations dans le micro</b> : vos coéquipiers vous entendent pour de vrai. Farmez monstres et boss pour récupérer des parchemins et débloquer de nouveaux sorts, en coop ou chacun pour soi.", "Choisissez l'une des cinq classes, entrez dans l'arène et <b>criez vos formules dans le micro</b> (en anglais) : le clic gauche lance votre attaque de base, la voix lance vos sorts. En coop ou chacun pour soi.")

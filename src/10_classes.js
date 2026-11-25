@@ -14,14 +14,14 @@ CL.elem = {rpg:1, own:1, name:'Mage élémentaire', col:'#ff9a3a', pitch:.95, el
 CL.summon.rpg = 1; CL.summon.el = 'spirit'; CL.summon.name = 'Mage invocateur'; CL.summon.role = 'Puissance et protection grâce au golem';
 CL.summon.desc = 'Un golem gardien combat à ses côtés. Ses formules renforcent et commandent le golem.'; CL.summon.stats = {Dégâts:3, Survie:4, Contrôle:3, Soutien:3, Difficulté:2}; CL.summon.basicD = 'Projectile spirituel : désigne aussi la cible du golem';
 CL.summon.spells = [
-  {n:'Rise Guardian', k:'sum', act:'rise', dmg:0, mana:18, cd:6},
+  {n:'Rise Guardian', k:'sum', act:'rise', dmg:0, mana:22, cd:15},
   {n:'Titan Fist', k:'sum', act:'fist', dmg:55, r:5, mana:24, cd:7},
   {n:'Spirit Armor', k:'sum', act:'skin', dmg:0, mana:22, cd:14},
   {n:'Guardian Rage', k:'sum', act:'fury', dmg:0, mana:26, cd:16},
   {n:'Titanic Leap', k:'sum', act:'smash', dmg:70, r:5.5, mana:30, cd:9},
   {n:'Ancestral Colossus', k:'sum', act:'titan', ult:1, dmg:0, mana:70, cd:75}];
 Object.assign(SUM_D, {fist:'Le golem frappe le sol : onde de choc, dégâts de zone, monstres repoussés', skin:'Armure spirituelle : le golem subit −50 % de dégâts 8 s, runes lumineuses, il attire les monstres', fury:'Rage du gardien : le golem frappe 40 % plus vite et 60 % plus fort pendant 10 s',
-  smash:'Le golem fait un saut titanesque vers le point visé : dégâts de zone, monstres projetés et étourdis', titan:'ULTIME : le golem devient un colosse géant 20 s : plus grand, plus résistant (+50 % de vie), coups en zone', rise:'Rappelle le golem près de vous et lui rend sa vie (ou le ressuscite)'});
+  smash:'Le golem fait un saut titanesque vers le point visé : dégâts de zone, monstres projetés et étourdis', titan:'ULTIME : le golem devient un colosse géant 20 s : plus grand, plus résistant (+50 % de vie), coups en zone', rise:'Rappelle le golem près de vous et lui rend la moitié de sa vie (ou le ressuscite à 60 %)'});
 CL.celest = {rpg:1, own:1, soon:1, name:'Mage céleste', col:'#ffe9a8', pitch:1.25, el:'spirit', role:'Soins, soutien, mobilité et dégâts sacrés', desc:'Un mage ailé qui soigne ses alliés, draine la vie des ennemis et s\'envole pour frapper d\'en haut.',
   stats:{Dégâts:2, Survie:3, Contrôle:2, Soutien:5, Difficulté:3}, basicD:'Clic maintenu : soigne l\'allié visé ou draine la vie de l\'ennemi visé', spells:[]};
 CL.glad = {rpg:1, own:1, soon:1, name:'Gladiateur runique', col:'#ff5a3a', pitch:.75, el:'fire', role:'Corps à corps, résistance et dégâts explosifs', desc:'Il se bat avec ses poings et des runes gravées sur son corps. Plus il souffre, plus il frappe fort.',
@@ -42,20 +42,23 @@ const rpgCls = () => CL[me.cls] && CL[me.cls].rpg;
 function rpgStartKnown(){ const C = CL[me.cls]; if (!C || !C.rpg) return; known = C.spells.map((_, i) => me.cls + ':' + i).filter(id => rpgUnlocked(id)); if (!known.length) known = [me.cls + ':0']; page = 0; pageId = known[0]; INC_SEL = {}; known.forEach(id => { INC_SEL[id] = spellOf(id).n; }); }
 function rpgUnlocked(id){ return typeof progUnlocked === 'function' ? progUnlocked(id) : true; }
 /* ---- point visé au sol ---- */
-function aimGround(max){ const d = aimDir(), c = camera.position; let t = d.y < -.02 ? -c.y/d.y : 40; t = Math.min(t, max || 34); return [r2(c.x + d.x*t), r2(c.z + d.z*t)]; }
+function aimGround(max){ const d = aimDir(), c = camera.position, M = max || 34; let t = .5; for (; t < M; t += .4) { const x = c.x + d.x*t, z = c.z + d.z*t; if (c.y + d.y*t <= groundH(x, z) + .1) break; } t = Math.min(t, M); return [r2(c.x + d.x*t), r2(c.z + d.z*t)]; }
 /* ---- clic gauche : attaque de base de la classe, et sélection des 3 points du triangle d'eau ---- */
-function rpgClick(){ const P = RPG.tri; if (!P) return false; const p = aimGround(30); P.pts.push(p); triMarker(p[0], p[1], P.pts.length); sfxChime(); $('#bkhint').textContent = 'Triangle d\'eau : point ' + P.pts.length + '/3';
+function rpgClick(){ const P = RPG.tri; if (!P) return typeof rpgClick2 === 'function' ? rpgClick2() : false; const p = aimGround(30); P.pts.push(p); triMarker(p[0], p[1], P.pts.length); sfxChime(); $('#bkhint').textContent = 'Triangle d\'eau : point ' + P.pts.length + '/3';
   if (P.pts.length >= 3) triGo(P); return true; }
 function triGo(P){ RPG.tri = null; RPG.triDone = {id:P.id, pts:P.pts}; castOut(P.id); }
 /* le triangle d'eau attend ses 3 points avant de partir (mana et recharge déjà payés) */
 function rpgPre(id){ const sp = spellOf(id); if (!sp || sp.act !== 'tri') return false; if (RPG.triDone && RPG.triDone.id === id) return false;
   if (!RPG.tri) { RPG.tri = {id, pts:[], t:T + 6}; toast('Triangle d\'eau : visez et cliquez 3 points au sol (6 s)'); $('#bkhint').textContent = 'Triangle d\'eau : point 0/3'; } return true; }
 function rpgData(id, data){ const sp = spellOf(id); if (id === 'basic') { rpgBasic(data); return; } if (!sp) return; if (me.cls === 'elem' && sp.el) RPG.lastEl = sp.el;
-  if (sp.k === 'rpg' || sp.k === 'sum') data.t = aimGround(34); if (sp.act === 'tri' && RPG.triDone) { data.pts = RPG.triDone.pts; RPG.triDone = null; } }
+  if (sp.k === 'rpg' || sp.k === 'sum') data.t = aimGround(34); if (sp.act === 'tri' && RPG.triDone) { data.pts = RPG.triDone.pts; RPG.triDone = null; }
+  if (sp.act === 'shield') data.tg = aimAlly(30) || me.peer || 'me';
+  if (sp.act === 'drain') data.ids = chainTargets(camera.position, aimDir(), 1);
+  if (sp.act === 'rez') { let best = null, bd = 25; for (const [p, o] of others) if (o.dead) { const d = Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z); if (d < bd) { bd = d; best = p; } } if (best) data.rez = best; } }
 function triTick(){ const P = RPG.tri; if (!P) return; if (T > P.t || me.dead) { /* pas assez de clics : le triangle se forme devant vous */ const g = aimGround(16), fx_ = -Math.sin(me.yaw), fz = -Math.cos(me.yaw), rx = Math.cos(me.yaw), rz = -Math.sin(me.yaw);
     while (P.pts.length < 3) { const n = P.pts.length; P.pts.push(n === 0 ? [r2(me.x + fx_*3), r2(me.z + fz*3)] : n === 1 ? [r2(g[0] + rx*6), r2(g[1] + rz*6)] : [r2(g[0] - rx*6), r2(g[1] - rz*6)]); } triGo(P); } }
 /* ---- attaque de base par classe ---- */
-function rpgBasic(data){ const c = me.cls; if (c === 'elem') { data.bel = RPG.lastEl; data.bm = 1.35; } else if (c === 'necro') { data.bel = 'shadow'; data.bm = 1.2; } }
+function rpgBasic(data){ const c = me.cls; if (c === 'elem') { data.bel = RPG.lastEl; data.bm = 1.35; } else if (c === 'necro') { data.bel = 'shadow'; data.bm = 1.2; } if (typeof rpgBasic2 === 'function') rpgBasic2(data); }
 /* ---- lancer : dispatch des comportements ---- */
 function rpgCast(data, caster, mine, sp, el, col){ const o = data.o, rk = fin(data.rk) ? data.rk : 1, pot = rk >= 2 ? 1.25 : 1, big = rk >= 3 ? 1.25 : 1, t = Array.isArray(data.t) && data.t.every(fin) ? data.t : [o[0], o[2]], dmg = sp.dmg*pot*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1)*(fin(data.q) ? clamp(data.q, .5, 1.3) : 1);
   if (sp.act === 'dragon') castDragon(o, data.d, sp, dmg, big, caster, data.sd | 0);
@@ -149,7 +152,7 @@ function rpgHurt(m, dmg, f, by){ if (dmg <= 0 || !f) return dmg;
   if (typeof rpgHurt2 === 'function') dmg = rpgHurt2(m, dmg, f, by); return dmg; }
 /* ---- Poing titan du golem ---- */
 function rpgFist(g, sp, pot, by){ g.a = .6; const R = (sp.r || 5)*(g.titanT > T ? 1.4 : 1), dmg = (sp.dmg || 55)*allyWk()*pot*(g.furyT > T ? 1.3 : 1); W.hits.push(['gslam', r2(g.x), r2(g.z), r2(R)]); allySlamFx(g.x, g.z, R);
-  for (const m of [...mons.values()]) { const d = Math.hypot(m.x - g.x, m.z - g.z); if (d < R + MT[m.type].r) { hurt(m, dmg, {el:'spirit', sn:'Titan Fist', push:3}, (m.x - g.x)/(d || 1), (m.z - g.z)/(d || 1), g.owner); if (mons.has(m.id) && !MT[m.type].boss && !MT[m.type].head) { m.stunT = T + .8; moveMon(m, (m.x - g.x)/(d || 1)*2.5, (m.z - g.z)/(d || 1)*2.5, MT[m.type]); } } } }
+  for (const m of [...mons.values()]) { const d = Math.hypot(m.x - g.x, m.z - g.z); if (d < R + MT[m.type].r) { hurt(m, dmg, {el:'spirit', sn:'Titan Fist', push:3, aid:g.id}, (m.x - g.x)/(d || 1), (m.z - g.z)/(d || 1), g.owner); if (mons.has(m.id) && !MT[m.type].boss && !MT[m.type].head) { m.stunT = T + .8; moveMon(m, (m.x - g.x)/(d || 1)*2.5, (m.z - g.z)/(d || 1)*2.5, MT[m.type]); } } } }
 /* ---- réactions avec l'eau ---- */
 function rpgReact(key, m, x, z, by, k){ if (key === 'fire+water') { rxNear(x, z, 5).forEach(o => { o.blindT = T + 4; }); return true; }
   if (key === 'ice+water') { rxNear(x, z, 4.5).forEach(o => { if (!MT[o.type].boss && !MT[o.type].head) o.stunT = T + 2.5; o.slowT = Math.max(o.slowT || 0, 4); }); W.hits.push(['frostfloor', r2(x), r2(z)]); decal(x, z, 4.5, 'frost', 4); return true; }
