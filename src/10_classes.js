@@ -15,7 +15,7 @@ CL.summon.rpg = 1; CL.summon.el = 'spirit'; CL.summon.name = 'Mage invocateur'; 
 CL.summon.desc = 'Un golem gardien combat à ses côtés. Ses formules renforcent et commandent le golem.'; CL.summon.stats = {Dégâts:3, Survie:4, Contrôle:3, Soutien:3, Difficulté:2}; CL.summon.basicD = 'Projectile spirituel : désigne aussi la cible du golem';
 CL.summon.spells = [
   {n:'Rise Guardian', k:'sum', act:'rise', dmg:0, mana:22, cd:15},
-  {n:'Titan Fist', k:'sum', act:'fist', dmg:55, r:5, mana:24, cd:7},
+  {n:'Titan Fist', k:'sum', act:'fist', dmg:70, r:5, mana:24, cd:7},
   {n:'Spirit Armor', k:'sum', act:'skin', dmg:0, mana:22, cd:14},
   {n:'Guardian Rage', k:'sum', act:'fury', dmg:0, mana:26, cd:16},
   {n:'Titanic Leap', k:'sum', act:'smash', dmg:70, r:5.5, mana:30, cd:9},
@@ -151,6 +151,7 @@ function apocSky(dur){ let e = $('#apocsky'); if (!e) { e = document.createEleme
 function rpgHurt(m, dmg, f, by){ if (dmg <= 0 || !f) return dmg; if (f.sn === 'Poings' && (m.stunT > T || m.ipT > T)) dmg *= 1.3;
   if (m.ipT > T && f.sn !== 'Ice Prison' && !f.ipx) { m.ipT = 0; m.stunT = 0; const bonus = (m.ipD || 30)*1.5; W.hits.push(['ishatter', m.id]); shatterFx(m.id); W.hits.push(['qpop', 'Prison brisée !']); if (by === me.peer || by === 'me') qPop('Prison brisée !', '#bfeaff');
     for (const o of rxNear(m.x, m.z, 3)) if (o !== m) hurt(o, bonus*.5, {el:'ice', sn:'Éclats de glace', ipx:1, rx:1}, 0, 0, m.ipBy); dmg += bonus; }
+  if (typeof arenaHurt === 'function') dmg = arenaHurt(m, dmg, by);
   if (typeof rpgHurt2 === 'function') dmg = rpgHurt2(m, dmg, f, by); return dmg; }
 /* ---- Poing titan du golem ---- */
 function rpgFist(g, sp, pot, by){ g.a = .6; const R = (sp.r || 5)*(g.titanT > T ? 1.4 : 1), dmg = (sp.dmg || 55)*allyWk()*pot*(g.furyT > T ? 1.3 : 1); W.hits.push(['gslam', r2(g.x), r2(g.z), r2(R)]); allySlamFx(g.x, g.z, R);

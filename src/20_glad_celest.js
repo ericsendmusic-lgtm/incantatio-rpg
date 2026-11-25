@@ -4,7 +4,7 @@ delete CL.glad.soon; delete CL.celest.soon;
 CL.glad.el = 'phys'; CL.glad.basicD = 'Combo de trois coups de poing : rapide, puissant, dévastateur (onde de choc). Chaque coup remplit la Rage';
 CL.glad.spells = [
   {n:'Gladiator Leap', k:'rpg', act:'leap', el:'phys', dmg:45, r:5, mana:25, cd:8, d:'Bondit vers le point visé (18 m max) : onde de choc à l\'atterrissage, monstres étourdis 1,5 s'},
-  {n:'Seismic Fist', k:'rpg', act:'seismic', el:'phys', dmg:55, len:13, w:3.4, mana:30, cd:9, d:'Frappe le sol : une faille s\'ouvre devant vous, blesse et projette les monstres'},
+  {n:'Seismic Fist', k:'rpg', act:'seismic', el:'phys', dmg:55, len:13, w:3.4, mana:30, cd:11, d:'Frappe le sol : une faille s\'ouvre devant vous, blesse et projette les monstres'},
   {n:'Blood Rune', k:'rpg', act:'blood', el:'phys', dmg:0, mana:30, cd:20, d:'Rune de sang 12 s : 25 % des dégâts que vous infligez vous soignent'},
   {n:'Berserker', k:'rpg', act:'berserk', el:'phys', dmg:0, mana:20, cd:25, d:'Seulement sous 30 % de vie : +50 % de dégâts et coups plus rapides pendant 12 s (aura rouge)'},
   {n:'Gladiator Apex', k:'rpg', act:'apex', el:'phys', ult:1, dmg:0, mana:0, cd:80, d:'ULTIME : toutes les runes s\'embrasent 15 s : +25 % de dégâts, chaque coup fait une onde de choc, +30 % de vitesse, Rage pleine'}];
@@ -35,7 +35,7 @@ function rpgBasic2(data){ const c = me.cls;
   if (c === 'glad') { if (T - RPG.comboT > 1.1) RPG.combo = 0; RPG.combo = RPG.combo % 3 + 1; RPG.comboT = T; data.mel = RPG.combo; me.mp = Math.min(me.maxMp, me.mp + 5*(1 + mod('rage'))); fistAnim(RPG.combo); const fast = bOn(me.peer, 'berserk') || bOn(me.peer, 'apex'); cds.basic = now() + (RPG.combo === 3 ? .55 : .34)*(fast ? .75 : 1); }
   else if (c === 'celest') { if (RPG.fly > T) { data.orb = 1; cds.basic = now() + .45; } else data.beam = RPG.beamTg; } }
 function rpgBasicCast(data, caster, mine, el, col){ const o = data.o, d = data.d;
-  if (fin(data.mel)) { const st = clamp(data.mel, 1, 3), dmg = [12, 18, 34][st - 1]*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), apex = bOn(caster, 'apex'), dl = Math.hypot(d[0], d[2]) || 1, ux = d[0]/dl, uz = d[2]/dl, fx_ = o[0] + ux*1.8, fz = o[2] + uz*1.8;
+  if (fin(data.mel)) { const st = clamp(data.mel, 1, 3), dmg = [10, 15, 28][st - 1]*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), apex = bOn(caster, 'apex'), dl = Math.hypot(d[0], d[2]) || 1, ux = d[0]/dl, uz = d[2]/dl, fx_ = o[0] + ux*1.8, fz = o[2] + uz*1.8;
     if (!mine) { const oc = others.get(caster); if (oc && oc.g.userData.cast) oc.g.userData.cast(); }
     sfx('hit', clamp(1 - Math.hypot(me.x - o[0], me.z - o[2])/40, .1, .7)); puff(fx_, o[1] - .3, fz, st === 3 ? '#ffb07a' : '#ffe0c0', st === 3 ? 14 : 5, st === 3 ? 6 : 3, .4, .3, 1);
     if (st === 3 || apex) { shockwave(fx_, groundH(fx_, fz) + .2, fz, st === 3 ? 3 : 2.2, '#ff8a5a', .4); if (mine) shake = Math.max(shake, .12); }
@@ -118,6 +118,7 @@ function classUI(){ let e = $('#clsui'); if (!e) { e = document.createElement('d
   if (me.cls === 'glad') { for (const [k, n] of [['blood', 'Rune de sang'], ['berserk', 'Berserker'], ['apex', 'Apogée']]) if (B[k] > T) parts.push(n + ' ' + Math.ceil(B[k] - T) + ' s'); if (me.hp < .3*rpgMaxHp() && !(B.berserk > T) && (cds['glad:3'] || 0) < now()) parts.push('<b style="color:#ff5a3a">Berserker disponible !</b>'); }
   if (me.cls === 'celest') { parts.push('Grâce céleste ' + Math.floor(RPG.grace) + ' %' + (RPG.grace >= 100 ? ' : prochain sort renforcé' : '')); if (RPG.second > T) parts.push('Second souffle ' + Math.ceil(RPG.second - T) + ' s'); if (RPG.fly > T) parts.push('<b>Ascension ' + Math.ceil(RPG.fly - T) + ' s</b>'); }
   if (RPG.shield > 0 && RPG.shieldT > T) parts.push('Bouclier divin ' + Math.ceil(RPG.shield));
+  if (typeof grandOwned === 'function' && grandOwned(me.cls)) parts.push(CGRS.step ? 'Grande incantation ' + CGRS.step + '/3 : « ' + CGRAND[me.cls].steps[CGRS.step] + ' »' : CGRS.cd > now() ? 'Grande incantation ' + Math.ceil(CGRS.cd - now()) + ' s' : 'Grande incantation prête : « ' + CGRAND[me.cls].steps[0] + ' »');
   const h = parts.join('<br>'); if (e.innerHTML !== h) e.innerHTML = h;
   if (me.cls === 'glad') { const b = $('#mpb'); if (b) b.style.background = 'linear-gradient(#ff9a6a,#c8281a 45%,#4a0a06)'; } else { const b = $('#mpb'); if (b && b.style.background) b.style.background = ''; } }
 /* ---- tick ---- */

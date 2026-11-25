@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Construit index.html : tools/base.html (le jeu Incantatio Arena) + les modules src/*.js + les points d'accroche ci-dessous."""
 import glob, os, sys
-VERSION = 'v0.6.1 · 25/11'
+VERSION = 'v0.7 · 25/11'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 s = open(os.path.join(ROOT, 'tools/base.html')).read(); MISS = []; N = [0]
 def R(a, b, n=1):
@@ -49,7 +49,7 @@ R("const own = CL[me.cls].spells.map((_, i) => me.cls + ':' + i).filter(i => !kn
 R("cds[id] = now() + sp.cd;", "cds[id] = now() + sp.cd*rpgCdK(id);")
 R("const k = f.cat ? 1.4 : 1, x = m.x, z = m.z;", "const k = (f.cat ? 1.4 : 1)*(1 + modOf(by, 'rx')), x = m.x, z = m.z;")
 R("const mx = Math.round(220*allyWk());", "const mx = Math.round(220*allyWk()*(1 + modOf(o.peer, 'gHp')));")
-R("const dmg = 15*allyWk()*", "const dmg = 15*allyWk()*(1 + modOf(a.owner, 'gDmg'))*")
+R("const dmg = 15*allyWk()*", "const dmg = 18*allyWk()*(1 + modOf(a.owner, 'gDmg'))*")
 R("spd = 5.2*(fury", "spd = 5.2*(1 + modOf(a.owner, 'gSpd'))*(fury")
 R("a.hp + a.max*.015*dt", "a.hp + a.max*.015*(1 + modOf(a.owner, 'gReg'))*dt")
 R("if (titan) { for (const m of [...mons.values()]) { const dd = Math.hypot(m.x - tg.x, m.z - tg.z); if (dd < 3.5", "if (titan || modOf(a.owner, 'gAoe')) { for (const m of [...mons.values()]) { const dd = Math.hypot(m.x - tg.x, m.z - tg.z); if (dd < (titan ? 3.5 : 2.5)")
@@ -83,6 +83,8 @@ R("function riseVoice(n){", "function riseVoice(n){ if (/guard/.test(n)) return 
 R("$('#gbody').innerHTML = guideHTML() + encyHTML(); guideToc();", "$('#gbody').innerHTML = rpgGuideHTML() + rpgEncy(); guideToc();")
 R("<span>${n + 1}. ${esc(incOf(sid))}", "<span>${n + 1}. ${(spellOf(sid) || {}).ult ? '★ ' : ''}${esc(incOf(sid))}")
 R("(sealed ? `<li class=\"lock\"><span>~ ${sealed} page", "(rpgCls() ? rpgSealedHTML() : sealed ? `<li class=\"lock\"><span>~ ${sealed} page")
+R("function voiceExtras(text){ const n = norm(text);", "function voiceExtras(text){ if (calibVoice(text) || rpgGrandVoice(text)) return true; const n = norm(text);")
+R("function allyHurt(id, dmg){ const a = ALLIES.get(id); if (!a || a.deadT || a.sm) return;", "function allyHurt(id, dmg){ const a = ALLIES.get(id); if (!a || a.deadT || a.sm || a.invT > T) return;")
 R("<title>Incantatio Arena</title>", "<title>Incantatio RPG</title>")
 R("    <h1>Incantatio Arena</h1>", "    <h1>Incantatio RPG</h1>")
 R("Choisissez votre école de magie, entrez dans l'arène et <b>criez vos incantations dans le micro</b> : vos coéquipiers vous entendent pour de vrai. Farmez monstres et boss pour récupérer des parchemins et débloquer de nouveaux sorts, en coop ou chacun pour soi.", "Choisissez l'une des cinq classes, entrez dans l'arène et <b>criez vos formules dans le micro</b> (en anglais) : le clic gauche lance votre attaque de base, la voix lance vos sorts. En coop ou chacun pour soi.")
