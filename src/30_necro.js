@@ -11,8 +11,8 @@ const SOUL = {0:{c:1, l:1}, 1:{c:1, l:1}, 7:{c:1, l:1}, 9:{c:1, l:1}, 6:{c:2, l:
 const SOUL_N = t => MT[t] ? MT[t].n : '?';
 const NC = {res:[], orbs:new Map(), oid:1, mins:new Map(), mid:1, ui:null};
 const necroLvl = () => typeof progLevel === 'function' ? progLevel('necro') : 1;
-/* niveaux 1-5 : 2 serviteurs (capacité 2) · 6-10 : 3 (4) · 11-15 : 4 (7) · 16-20 : 5 (9) · 21+ : 6 (14), dont 2 puissants au plus */
-function necroCap(l, owner){ l = l || necroLvl(); const b = l >= 21 ? {n:6, c:14} : l >= 16 ? {n:5, c:9} : l >= 11 ? {n:4, c:7} : l >= 6 ? {n:3, c:4} : {n:2, c:2}; return {n:b.n + Math.round(modOf(owner, 'capN')), c:b.c + Math.round(modOf(owner, 'capC'))}; }
+/* taille de l'armée (et de la réserve d'âmes) : 6 au niveau 1, +1 tous les 4 niveaux (jusqu'à 18) ; 2 créatures puissantes au plus */
+function necroCap(l, owner){ l = l || necroLvl(); const b = {n:Math.min(18, 6 + Math.floor((l - 1)/4)), c:99}; return {n:b.n + Math.round(modOf(owner, 'capN')), c:b.c + Math.round(modOf(owner, 'capC'))}; }
 const anyNecro = () => (playing && me.cls === 'necro') || [...others.values()].some(o => o.cls === 'necro');
 /* ---- âmes au sol ---- */
 function soulDrop(m){ if (!isHost || !anyNecro()) return; const t = MT[m.type]; if (t.prop || t.head || t.phyl || m.ally) return; const ty = SOUL[m.type] ? m.type : (t.boss ? null : null); if (ty == null) return;

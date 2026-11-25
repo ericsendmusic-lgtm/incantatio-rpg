@@ -2077,7 +2077,7 @@ function wavesQuality(id, Q){ if (hasPact('murmure') && !Q.perfect) Q.q *= .6; }
 function riseTarget(){ if (me.dead || !room) return null; for (const [p, o] of others) if (o.dead && Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) < 3.5) return p; return null; }
 const riseNear = () => !!riseTarget();
 const GAME_VER = 'v2.5.2 · 25/11 golem';
-{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.6 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
+{ const v = document.createElement('div'); v.id = 'gamever'; v.textContent = 'Incantatio RPG ' + 'v0.6.1 · 25/11'; v.style.cssText = 'position:fixed;right:8px;bottom:4px;font:12px Georgia,serif;color:#f3e6c8;opacity:.55;z-index:70;pointer-events:none'; document.body.appendChild(v); }
 function riseStart(){ const p = riseTarget(); if (!p) return false; WV.rise = {peer:p, t:3}; toast('Résurrection : restez près de son âme 3 s'); return true; }
 function riseVoice(n){ if (/guard/.test(n)) return false; if (!/\b(rise|rice|rize|raise|rais)\b/.test(n)) return false; return riseStart(); }
 function riseTick(dt){ const R = WV.rise; if (!R) return; const o = others.get(R.peer); if (!o || !o.dead || me.dead || Math.hypot(o.g.position.x - me.x, o.g.position.z - me.z) > 3.8) { WV.rise = null; toast('Résurrection interrompue'); return; }
@@ -2837,11 +2837,11 @@ ELC.phys = '#ff9a6a'; MK_N.phys = 'Sonné';
 delete CL.glad.soon; delete CL.celest.soon;
 CL.glad.el = 'phys'; CL.glad.basicD = 'Combo de trois coups de poing : rapide, puissant, dévastateur (onde de choc). Chaque coup remplit la Rage';
 CL.glad.spells = [
-  {n:'Gladiator Leap', k:'rpg', act:'leap', el:'phys', dmg:50, r:5, mana:25, cd:8, d:'Bondit vers le point visé (18 m max) : onde de choc à l\'atterrissage, monstres étourdis 1,5 s'},
-  {n:'Seismic Fist', k:'rpg', act:'seismic', el:'phys', dmg:65, len:13, w:3.4, mana:30, cd:9, d:'Frappe le sol : une faille s\'ouvre devant vous, blesse et projette les monstres'},
+  {n:'Gladiator Leap', k:'rpg', act:'leap', el:'phys', dmg:45, r:5, mana:25, cd:8, d:'Bondit vers le point visé (18 m max) : onde de choc à l\'atterrissage, monstres étourdis 1,5 s'},
+  {n:'Seismic Fist', k:'rpg', act:'seismic', el:'phys', dmg:55, len:13, w:3.4, mana:30, cd:9, d:'Frappe le sol : une faille s\'ouvre devant vous, blesse et projette les monstres'},
   {n:'Blood Rune', k:'rpg', act:'blood', el:'phys', dmg:0, mana:30, cd:20, d:'Rune de sang 12 s : 25 % des dégâts que vous infligez vous soignent'},
   {n:'Berserker', k:'rpg', act:'berserk', el:'phys', dmg:0, mana:20, cd:25, d:'Seulement sous 30 % de vie : +50 % de dégâts et coups plus rapides pendant 12 s (aura rouge)'},
-  {n:'Gladiator Apex', k:'rpg', act:'apex', el:'phys', ult:1, dmg:0, mana:0, cd:80, d:'ULTIME : toutes les runes s\'embrasent 15 s : +40 % de dégâts, chaque coup fait une onde de choc, +30 % de vitesse, Rage pleine'}];
+  {n:'Gladiator Apex', k:'rpg', act:'apex', el:'phys', ult:1, dmg:0, mana:0, cd:80, d:'ULTIME : toutes les runes s\'embrasent 15 s : +25 % de dégâts, chaque coup fait une onde de choc, +30 % de vitesse, Rage pleine'}];
 CL.celest.el = 'spirit'; CL.celest.basicD = 'Clic maintenu : soigne l\'allié visé, ou draine la vie de l\'ennemi visé (seul : la lumière vous soigne doucement)';
 CL.celest.spells = [
   {n:'Circle of Life', k:'rpg', act:'circle', el:'spirit', dmg:0, r:6, mana:30, cd:14, d:'Cercle de lumière au sol 8 s : les alliés dedans récupèrent 6 PV par seconde'},
@@ -2869,17 +2869,18 @@ function rpgBasic2(data){ const c = me.cls;
   if (c === 'glad') { if (T - RPG.comboT > 1.1) RPG.combo = 0; RPG.combo = RPG.combo % 3 + 1; RPG.comboT = T; data.mel = RPG.combo; me.mp = Math.min(me.maxMp, me.mp + 5*(1 + mod('rage'))); fistAnim(RPG.combo); const fast = bOn(me.peer, 'berserk') || bOn(me.peer, 'apex'); cds.basic = now() + (RPG.combo === 3 ? .55 : .34)*(fast ? .75 : 1); }
   else if (c === 'celest') { if (RPG.fly > T) { data.orb = 1; cds.basic = now() + .45; } else data.beam = RPG.beamTg; } }
 function rpgBasicCast(data, caster, mine, el, col){ const o = data.o, d = data.d;
-  if (fin(data.mel)) { const st = clamp(data.mel, 1, 3), dmg = [14, 22, 40][st - 1]*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), apex = bOn(caster, 'apex'), dl = Math.hypot(d[0], d[2]) || 1, ux = d[0]/dl, uz = d[2]/dl, fx_ = o[0] + ux*1.8, fz = o[2] + uz*1.8;
+  if (fin(data.mel)) { const st = clamp(data.mel, 1, 3), dmg = [12, 18, 34][st - 1]*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), apex = bOn(caster, 'apex'), dl = Math.hypot(d[0], d[2]) || 1, ux = d[0]/dl, uz = d[2]/dl, fx_ = o[0] + ux*1.8, fz = o[2] + uz*1.8;
     if (!mine) { const oc = others.get(caster); if (oc && oc.g.userData.cast) oc.g.userData.cast(); }
     sfx('hit', clamp(1 - Math.hypot(me.x - o[0], me.z - o[2])/40, .1, .7)); puff(fx_, o[1] - .3, fz, st === 3 ? '#ffb07a' : '#ffe0c0', st === 3 ? 14 : 5, st === 3 ? 6 : 3, .4, .3, 1);
     if (st === 3 || apex) { shockwave(fx_, groundH(fx_, fz) + .2, fz, st === 3 ? 3 : 2.2, '#ff8a5a', .4); if (mine) shake = Math.max(shake, .12); }
     if (st === 3 && modOf(caster, 'seis')) { fissureFx(o[0], o[2], ux, uz, 7); if (isHost) for (const m of [...mons.values()]) { const rx = m.x - o[0], rz = m.z - o[2], al = rx*ux + rz*uz, sd = Math.abs(-rx*uz + rz*ux); if (al > 2 && al < 7 && sd < 1.6 + MT[m.type].r) hurt(m, 30, {el:'phys', sn:'Rune sismique', rx:1}, ux, uz, caster); } }
-    if (isHost) { for (const m of [...mons.values()]) { const rx = m.x - o[0], rz = m.z - o[2], dd = Math.hypot(rx, rz) || 1, r = MT[m.type].r; const inCone = dd < 3.4 + r && (rx*ux + rz*uz)/dd > .45, inWave = (st === 3 || apex) && Math.hypot(m.x - fx_, m.z - fz) < (st === 3 ? 3 : 2.2) + r;
-        if (inCone || inWave) { hurt(m, inCone ? dmg : dmg*.5, {el:'phys', sn:'Poings', rx:1, push:st === 3 ? 3 : .6}, rx/dd, rz/dd, caster); if (st === 3 && mons.has(m.id) && !MT[m.type].boss && !MT[m.type].head) m.stunT = Math.max(m.stunT || 0, T + .4); } } }
+    if (isHost) { const cone = [...mons.values()].filter(m => { const rx = m.x - o[0], rz = m.z - o[2], dd = Math.hypot(rx, rz) || 1; return dd < 3.4 + MT[m.type].r && (rx*ux + rz*uz)/dd > .45; }).sort((a, b) => Math.hypot(a.x - o[0], a.z - o[2]) - Math.hypot(b.x - o[0], b.z - o[2])).slice(0, st === 3 ? 3 : 2);
+      for (const m of [...mons.values()]) { const rx = m.x - o[0], rz = m.z - o[2], dd = Math.hypot(rx, rz) || 1, r = MT[m.type].r; const inCone = cone.includes(m), inWave = !inCone && (st === 3 || apex) && Math.hypot(m.x - fx_, m.z - fz) < (st === 3 ? 3 : 2.2) + r;
+        if (inCone || inWave) { hurt(m, inCone ? dmg : dmg*.35, {el:'phys', sn:'Poings', rx:1, push:st === 3 ? 3 : .6}, rx/dd, rz/dd, caster); if (st === 3 && mons.has(m.id) && !MT[m.type].boss && !MT[m.type].head) m.stunT = Math.max(m.stunT || 0, T + .4); } } }
     return true; }
   if (data.orb === 1) { const sp = {n:'Orbe sacré', dmg:CL.celest.spells[4].dmg*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), spd:46, size:.85, splash:4.5}; spawnProj({x:o[0], y:o[1], z:o[2], v:new THREE.Vector3(d[0], d[1], d[2]).normalize().multiplyScalar(sp.spd), sp, col:'#ffe9a8', owner:caster, fxd:{el:'spirit', sn:'Orbe sacré'}, el:'spirit'}); sfx('zap', .5); return true; }
   if (data.beam != null) { const b = data.beam, from = isMe(caster) ? staffTipPos() : rpgCasterPos(caster, o);
-    if (typeof b === 'number') { const m = mons.get(b); if (m) { const to = new THREE.Vector3(m.x, (m.gy || 0) + MT[m.type].h*.6, m.z); beamFx(from, to, '#c8ff9a', '#ff6a8a'); if (isHost) hurt(m, 5.5*(1 + modOf(caster, 'drain')), {el:'spirit', sn:'Drain vital', rx:1}, 0, 0, caster); if (mine) { heal(2.2*(1 + mod('heal'))); graceAdd(2); } } }
+    if (typeof b === 'number') { const m = mons.get(b); if (m) { const to = new THREE.Vector3(m.x, (m.gy || 0) + MT[m.type].h*.6, m.z); beamFx(from, to, '#c8ff9a', '#ff6a8a'); if (isHost) hurt(m, 7*(1 + modOf(caster, 'drain')), {el:'spirit', sn:'Drain vital', rx:1}, 0, 0, caster); if (mine) { heal(2.2*(1 + mod('heal'))); graceAdd(2); } } }
     else if (typeof b === 'string' && /^[gn]:\d+$/.test(b)) synBeam(b, caster, mine, from);
     else if (typeof b === 'string' && b.startsWith('p:')) { const p = b.slice(2), to = p === me.peer ? new THREE.Vector3(me.x, me.y - .5, me.z) : (() => { const ot = others.get(p); return ot ? ot.g.position.clone().add(new THREE.Vector3(0, 1.2, 0)) : null; })();
       if (to) beamFx(from, to, '#fff2b0', '#ffe9a8'); if (p === me.peer && !me.dead) heal(3.5*(1 + modOf(caster, 'heal'))); if (mine) graceAdd(3.5); }
@@ -2912,7 +2913,7 @@ function rpgCast2(data, caster, mine, sp, el, col, t, dmg, pot, big){ const du =
 /* ---- soins des cercles de vie (chaque joueur se soigne lui-même) ---- */
 function circlesTick(dt){ const L = RPG.circles || []; for (let i = L.length - 1; i >= 0; i--) { const c = L[i]; if (T > c.t0 + c.dur) { L.splice(i, 1); continue; } synHealSummons(c.x, c.z, c.R, 6*c.pot*dt); if (!me.dead && Math.hypot(me.x - c.x, me.z - c.z) < c.R) { const h = 6*c.pot*dt; heal(h); if (c.mine) graceAdd(h); } } }
 /* ---- coups reçus (hôte) : multiplicateurs du gladiateur, vampirisme ---- */
-function rpgHurt2(m, dmg, f, by){ const B = RPG.buff[pk_(by)] || {}; if (B.berserk > T) dmg *= 1.5; if (B.apex > T) dmg *= 1.4; const ls = (B.blood > T ? .25 : 0) + (f && !f.aid && !f.nid ? modOf(by, 'ls') : 0);
+function rpgHurt2(m, dmg, f, by){ const B = RPG.buff[pk_(by)] || {}; if (B.berserk > T) dmg *= 1.5; if (B.apex > T) dmg *= 1.25; const ls = (B.blood > T ? .25 : 0) + (f && !f.aid && !f.nid ? modOf(by, 'ls') : 0);
   if (ls > 0 && dmg > 0) { const h = Math.min(dmg, Math.max(0, m.hp))*ls; if (h > .5) { if (isMe(by)) heal(h); else W.hits.push(['heal', by, Math.round(h)]); } } return dmg; }
 /* ---- effets ---- */
 function runeBurst(x, z, col){ const y = groundH(x, z); shockwave(x, y + .2, z, 3, col, .6); for (let i = 0; i < 8; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({map:RUNE_TX[i % RUNE_TX.length], color:new THREE.Color(col), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending})); s.scale.setScalar(.7); scene.add(s); const a = i/8*6.28;
@@ -2979,8 +2980,8 @@ const SOUL = {0:{c:1, l:1}, 1:{c:1, l:1}, 7:{c:1, l:1}, 9:{c:1, l:1}, 6:{c:2, l:
 const SOUL_N = t => MT[t] ? MT[t].n : '?';
 const NC = {res:[], orbs:new Map(), oid:1, mins:new Map(), mid:1, ui:null};
 const necroLvl = () => typeof progLevel === 'function' ? progLevel('necro') : 1;
-/* niveaux 1-5 : 2 serviteurs (capacité 2) · 6-10 : 3 (4) · 11-15 : 4 (7) · 16-20 : 5 (9) · 21+ : 6 (14), dont 2 puissants au plus */
-function necroCap(l, owner){ l = l || necroLvl(); const b = l >= 21 ? {n:6, c:14} : l >= 16 ? {n:5, c:9} : l >= 11 ? {n:4, c:7} : l >= 6 ? {n:3, c:4} : {n:2, c:2}; return {n:b.n + Math.round(modOf(owner, 'capN')), c:b.c + Math.round(modOf(owner, 'capC'))}; }
+/* taille de l'armée (et de la réserve d'âmes) : 6 au niveau 1, +1 tous les 4 niveaux (jusqu'à 18) ; 2 créatures puissantes au plus */
+function necroCap(l, owner){ l = l || necroLvl(); const b = {n:Math.min(18, 6 + Math.floor((l - 1)/4)), c:99}; return {n:b.n + Math.round(modOf(owner, 'capN')), c:b.c + Math.round(modOf(owner, 'capC'))}; }
 const anyNecro = () => (playing && me.cls === 'necro') || [...others.values()].some(o => o.cls === 'necro');
 /* ---- âmes au sol ---- */
 function soulDrop(m){ if (!isHost || !anyNecro()) return; const t = MT[m.type]; if (t.prop || t.head || t.phyl || m.ally) return; const ty = SOUL[m.type] ? m.type : (t.boss ? null : null); if (ty == null) return;
@@ -3270,7 +3271,7 @@ const CTUTO = {
   summon:[['Votre golem vous suit et frappe seul. Clic gauche : projectile spirituel qui désigne sa cible.', 'basic'], ['Dites « Titan Fist » : le golem frappe le sol autour de lui.', 'cast'], ['Sa vie s\'affiche au-dessus de lui et à gauche. S\'il tombe, « Rise Guardian » le relève (il revient seul au bout de 20 s).', 10], ['Un mage élémentaire qui lance Feu, Glace ou Foudre près du golem l\'imprègne de cet élément.', 10], ['K : arbre des compétences (branches Colosse, Destructeur, Esprit ancestral) · G : guide.', 8]],
   celest:[['Maintenez le clic gauche sur un ennemi : vous drainez sa vie. Sur un allié, un golem ou un serviteur : vous le soignez.', 'basic'], ['Dites « Circle of Life » : un cercle de soin au sol.', 'cast'], ['Vos soins remplissent la Grâce céleste : à 100 %, votre prochain sort est renforcé.', 10], ['L\'ultime « Ascension » vous fait voler 10 s : clic gauche pour lancer des orbes sacrés. En vol, vous subissez 70 % de dégâts en moins et les serviteurs alliés attirent les monstres.', 12], ['K : arbre (Protecteur, Exécuteur sacré, Archange) · G : guide.', 8]],
   glad:[['Clic gauche : combo de trois coups de poing. Le 3e fait une onde de choc. Frapper remplit la Rage (barre rouge).', 'basic'], ['Dites « Gladiator Leap » en visant le sol : vous bondissez et étourdissez à l\'atterrissage.', 'cast'], ['Les monstres étourdis ou emprisonnés prennent +30 % de dégâts de vos poings. Sous 30 % de vie, dites « Berserker ».', 10], ['Seismic Fist sur des monstres mouillés (Water Triangle d\'un allié) les électrocute.', 10], ['K : arbre (Berserker, Maître des runes, Gladiateur immortel) · G : guide.', 8]],
-  necro:[['Clic gauche : projectile nécrotique. Les monstres tués laissent des âmes violettes : passez dessus pour les ramasser.', 'basic'], ['Dites « Arise » : toutes les âmes de votre réserve se relèvent et combattent pour vous.', 'cast'], ['Votre niveau fixe la taille de l\'armée et les créatures permises (ogres au niveau 11, mini-boss au niveau 21).', 10], ['« Harvest » aspire les âmes au loin. « Macabre Explosion » fait exploser vos serviteurs.', 10], ['K : arbre (Maître des goules, Seigneur des morts, Roi des âmes) · G : guide.', 8]]};
+  necro:[['Clic gauche : projectile nécrotique. Les monstres tués laissent des âmes violettes : passez dessus pour les ramasser.', 'basic'], ['Dites « Arise » : toutes les âmes de votre réserve se relèvent et combattent pour vous.', 'cast'], ['Votre réserve et votre armée comptent 6 âmes au niveau 1 (+1 tous les 4 niveaux). Créatures permises : ogres au niveau 11, mini-boss au niveau 21.', 10], ['« Harvest » aspire les âmes au loin. « Macabre Explosion » fait exploser vos serviteurs.', 10], ['K : arbre (Maître des goules, Seigneur des morts, Roi des âmes) · G : guide.', 8]]};
 let CT = {}; try { CT = JSON.parse(localStorage.getItem('incantatio-rpg-tuto') || '{}') || {}; } catch (e) { CT = {}; }
 const CTS = {i:0, t:0, basic:0, cast:0};
 function ctutoTick(dt){ let e = $('#ctuto'); if (!e) { e = document.createElement('div'); e.id = 'ctuto'; e.style.cssText = 'position:fixed;left:50%;top:92px;transform:translateX(-50%);max-width:600px;padding:8px 14px;border-radius:10px;background:#120e0ae8;border:1px solid #c9a24a;color:#f3e6c8;font:15px Georgia,serif;line-height:1.4;z-index:31;pointer-events:none;text-align:center;display:none'; document.body.appendChild(e); }

@@ -3,11 +3,11 @@ ELC.phys = '#ff9a6a'; MK_N.phys = 'Sonné';
 delete CL.glad.soon; delete CL.celest.soon;
 CL.glad.el = 'phys'; CL.glad.basicD = 'Combo de trois coups de poing : rapide, puissant, dévastateur (onde de choc). Chaque coup remplit la Rage';
 CL.glad.spells = [
-  {n:'Gladiator Leap', k:'rpg', act:'leap', el:'phys', dmg:50, r:5, mana:25, cd:8, d:'Bondit vers le point visé (18 m max) : onde de choc à l\'atterrissage, monstres étourdis 1,5 s'},
-  {n:'Seismic Fist', k:'rpg', act:'seismic', el:'phys', dmg:65, len:13, w:3.4, mana:30, cd:9, d:'Frappe le sol : une faille s\'ouvre devant vous, blesse et projette les monstres'},
+  {n:'Gladiator Leap', k:'rpg', act:'leap', el:'phys', dmg:45, r:5, mana:25, cd:8, d:'Bondit vers le point visé (18 m max) : onde de choc à l\'atterrissage, monstres étourdis 1,5 s'},
+  {n:'Seismic Fist', k:'rpg', act:'seismic', el:'phys', dmg:55, len:13, w:3.4, mana:30, cd:9, d:'Frappe le sol : une faille s\'ouvre devant vous, blesse et projette les monstres'},
   {n:'Blood Rune', k:'rpg', act:'blood', el:'phys', dmg:0, mana:30, cd:20, d:'Rune de sang 12 s : 25 % des dégâts que vous infligez vous soignent'},
   {n:'Berserker', k:'rpg', act:'berserk', el:'phys', dmg:0, mana:20, cd:25, d:'Seulement sous 30 % de vie : +50 % de dégâts et coups plus rapides pendant 12 s (aura rouge)'},
-  {n:'Gladiator Apex', k:'rpg', act:'apex', el:'phys', ult:1, dmg:0, mana:0, cd:80, d:'ULTIME : toutes les runes s\'embrasent 15 s : +40 % de dégâts, chaque coup fait une onde de choc, +30 % de vitesse, Rage pleine'}];
+  {n:'Gladiator Apex', k:'rpg', act:'apex', el:'phys', ult:1, dmg:0, mana:0, cd:80, d:'ULTIME : toutes les runes s\'embrasent 15 s : +25 % de dégâts, chaque coup fait une onde de choc, +30 % de vitesse, Rage pleine'}];
 CL.celest.el = 'spirit'; CL.celest.basicD = 'Clic maintenu : soigne l\'allié visé, ou draine la vie de l\'ennemi visé (seul : la lumière vous soigne doucement)';
 CL.celest.spells = [
   {n:'Circle of Life', k:'rpg', act:'circle', el:'spirit', dmg:0, r:6, mana:30, cd:14, d:'Cercle de lumière au sol 8 s : les alliés dedans récupèrent 6 PV par seconde'},
@@ -35,17 +35,18 @@ function rpgBasic2(data){ const c = me.cls;
   if (c === 'glad') { if (T - RPG.comboT > 1.1) RPG.combo = 0; RPG.combo = RPG.combo % 3 + 1; RPG.comboT = T; data.mel = RPG.combo; me.mp = Math.min(me.maxMp, me.mp + 5*(1 + mod('rage'))); fistAnim(RPG.combo); const fast = bOn(me.peer, 'berserk') || bOn(me.peer, 'apex'); cds.basic = now() + (RPG.combo === 3 ? .55 : .34)*(fast ? .75 : 1); }
   else if (c === 'celest') { if (RPG.fly > T) { data.orb = 1; cds.basic = now() + .45; } else data.beam = RPG.beamTg; } }
 function rpgBasicCast(data, caster, mine, el, col){ const o = data.o, d = data.d;
-  if (fin(data.mel)) { const st = clamp(data.mel, 1, 3), dmg = [14, 22, 40][st - 1]*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), apex = bOn(caster, 'apex'), dl = Math.hypot(d[0], d[2]) || 1, ux = d[0]/dl, uz = d[2]/dl, fx_ = o[0] + ux*1.8, fz = o[2] + uz*1.8;
+  if (fin(data.mel)) { const st = clamp(data.mel, 1, 3), dmg = [12, 18, 34][st - 1]*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), apex = bOn(caster, 'apex'), dl = Math.hypot(d[0], d[2]) || 1, ux = d[0]/dl, uz = d[2]/dl, fx_ = o[0] + ux*1.8, fz = o[2] + uz*1.8;
     if (!mine) { const oc = others.get(caster); if (oc && oc.g.userData.cast) oc.g.userData.cast(); }
     sfx('hit', clamp(1 - Math.hypot(me.x - o[0], me.z - o[2])/40, .1, .7)); puff(fx_, o[1] - .3, fz, st === 3 ? '#ffb07a' : '#ffe0c0', st === 3 ? 14 : 5, st === 3 ? 6 : 3, .4, .3, 1);
     if (st === 3 || apex) { shockwave(fx_, groundH(fx_, fz) + .2, fz, st === 3 ? 3 : 2.2, '#ff8a5a', .4); if (mine) shake = Math.max(shake, .12); }
     if (st === 3 && modOf(caster, 'seis')) { fissureFx(o[0], o[2], ux, uz, 7); if (isHost) for (const m of [...mons.values()]) { const rx = m.x - o[0], rz = m.z - o[2], al = rx*ux + rz*uz, sd = Math.abs(-rx*uz + rz*ux); if (al > 2 && al < 7 && sd < 1.6 + MT[m.type].r) hurt(m, 30, {el:'phys', sn:'Rune sismique', rx:1}, ux, uz, caster); } }
-    if (isHost) { for (const m of [...mons.values()]) { const rx = m.x - o[0], rz = m.z - o[2], dd = Math.hypot(rx, rz) || 1, r = MT[m.type].r; const inCone = dd < 3.4 + r && (rx*ux + rz*uz)/dd > .45, inWave = (st === 3 || apex) && Math.hypot(m.x - fx_, m.z - fz) < (st === 3 ? 3 : 2.2) + r;
-        if (inCone || inWave) { hurt(m, inCone ? dmg : dmg*.5, {el:'phys', sn:'Poings', rx:1, push:st === 3 ? 3 : .6}, rx/dd, rz/dd, caster); if (st === 3 && mons.has(m.id) && !MT[m.type].boss && !MT[m.type].head) m.stunT = Math.max(m.stunT || 0, T + .4); } } }
+    if (isHost) { const cone = [...mons.values()].filter(m => { const rx = m.x - o[0], rz = m.z - o[2], dd = Math.hypot(rx, rz) || 1; return dd < 3.4 + MT[m.type].r && (rx*ux + rz*uz)/dd > .45; }).sort((a, b) => Math.hypot(a.x - o[0], a.z - o[2]) - Math.hypot(b.x - o[0], b.z - o[2])).slice(0, st === 3 ? 3 : 2);
+      for (const m of [...mons.values()]) { const rx = m.x - o[0], rz = m.z - o[2], dd = Math.hypot(rx, rz) || 1, r = MT[m.type].r; const inCone = cone.includes(m), inWave = !inCone && (st === 3 || apex) && Math.hypot(m.x - fx_, m.z - fz) < (st === 3 ? 3 : 2.2) + r;
+        if (inCone || inWave) { hurt(m, inCone ? dmg : dmg*.35, {el:'phys', sn:'Poings', rx:1, push:st === 3 ? 3 : .6}, rx/dd, rz/dd, caster); if (st === 3 && mons.has(m.id) && !MT[m.type].boss && !MT[m.type].head) m.stunT = Math.max(m.stunT || 0, T + .4); } } }
     return true; }
   if (data.orb === 1) { const sp = {n:'Orbe sacré', dmg:CL.celest.spells[4].dmg*(fin(data.bm) ? clamp(data.bm, .5, 3) : 1), spd:46, size:.85, splash:4.5}; spawnProj({x:o[0], y:o[1], z:o[2], v:new THREE.Vector3(d[0], d[1], d[2]).normalize().multiplyScalar(sp.spd), sp, col:'#ffe9a8', owner:caster, fxd:{el:'spirit', sn:'Orbe sacré'}, el:'spirit'}); sfx('zap', .5); return true; }
   if (data.beam != null) { const b = data.beam, from = isMe(caster) ? staffTipPos() : rpgCasterPos(caster, o);
-    if (typeof b === 'number') { const m = mons.get(b); if (m) { const to = new THREE.Vector3(m.x, (m.gy || 0) + MT[m.type].h*.6, m.z); beamFx(from, to, '#c8ff9a', '#ff6a8a'); if (isHost) hurt(m, 5.5*(1 + modOf(caster, 'drain')), {el:'spirit', sn:'Drain vital', rx:1}, 0, 0, caster); if (mine) { heal(2.2*(1 + mod('heal'))); graceAdd(2); } } }
+    if (typeof b === 'number') { const m = mons.get(b); if (m) { const to = new THREE.Vector3(m.x, (m.gy || 0) + MT[m.type].h*.6, m.z); beamFx(from, to, '#c8ff9a', '#ff6a8a'); if (isHost) hurt(m, 7*(1 + modOf(caster, 'drain')), {el:'spirit', sn:'Drain vital', rx:1}, 0, 0, caster); if (mine) { heal(2.2*(1 + mod('heal'))); graceAdd(2); } } }
     else if (typeof b === 'string' && /^[gn]:\d+$/.test(b)) synBeam(b, caster, mine, from);
     else if (typeof b === 'string' && b.startsWith('p:')) { const p = b.slice(2), to = p === me.peer ? new THREE.Vector3(me.x, me.y - .5, me.z) : (() => { const ot = others.get(p); return ot ? ot.g.position.clone().add(new THREE.Vector3(0, 1.2, 0)) : null; })();
       if (to) beamFx(from, to, '#fff2b0', '#ffe9a8'); if (p === me.peer && !me.dead) heal(3.5*(1 + modOf(caster, 'heal'))); if (mine) graceAdd(3.5); }
@@ -78,7 +79,7 @@ function rpgCast2(data, caster, mine, sp, el, col, t, dmg, pot, big){ const du =
 /* ---- soins des cercles de vie (chaque joueur se soigne lui-même) ---- */
 function circlesTick(dt){ const L = RPG.circles || []; for (let i = L.length - 1; i >= 0; i--) { const c = L[i]; if (T > c.t0 + c.dur) { L.splice(i, 1); continue; } synHealSummons(c.x, c.z, c.R, 6*c.pot*dt); if (!me.dead && Math.hypot(me.x - c.x, me.z - c.z) < c.R) { const h = 6*c.pot*dt; heal(h); if (c.mine) graceAdd(h); } } }
 /* ---- coups reçus (hôte) : multiplicateurs du gladiateur, vampirisme ---- */
-function rpgHurt2(m, dmg, f, by){ const B = RPG.buff[pk_(by)] || {}; if (B.berserk > T) dmg *= 1.5; if (B.apex > T) dmg *= 1.4; const ls = (B.blood > T ? .25 : 0) + (f && !f.aid && !f.nid ? modOf(by, 'ls') : 0);
+function rpgHurt2(m, dmg, f, by){ const B = RPG.buff[pk_(by)] || {}; if (B.berserk > T) dmg *= 1.5; if (B.apex > T) dmg *= 1.25; const ls = (B.blood > T ? .25 : 0) + (f && !f.aid && !f.nid ? modOf(by, 'ls') : 0);
   if (ls > 0 && dmg > 0) { const h = Math.min(dmg, Math.max(0, m.hp))*ls; if (h > .5) { if (isMe(by)) heal(h); else W.hits.push(['heal', by, Math.round(h)]); } } return dmg; }
 /* ---- effets ---- */
 function runeBurst(x, z, col){ const y = groundH(x, z); shockwave(x, y + .2, z, 3, col, .6); for (let i = 0; i < 8; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({map:RUNE_TX[i % RUNE_TX.length], color:new THREE.Color(col), transparent:true, depthWrite:false, blending:THREE.AdditiveBlending})); s.scale.setScalar(.7); scene.add(s); const a = i/8*6.28;
