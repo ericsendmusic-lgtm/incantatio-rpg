@@ -50,7 +50,7 @@ function triGo(P){ RPG.tri = null; RPG.triDone = {id:P.id, pts:P.pts}; castOut(P
 /* le triangle d'eau attend ses 3 points avant de partir (mana et recharge déjà payés) */
 function rpgPre(id){ const sp = spellOf(id); if (!sp || sp.act !== 'tri') return false; if (RPG.triDone && RPG.triDone.id === id) return false;
   if (!RPG.tri) { RPG.tri = {id, pts:[], t:T + 6}; toast('Triangle d\'eau : visez et cliquez 3 points au sol (6 s)'); $('#bkhint').textContent = 'Triangle d\'eau : point 0/3'; } return true; }
-function rpgData(id, data){ const sp = spellOf(id); if (id === 'basic') { rpgBasic(data); return; } if (!sp) return; if (me.cls === 'elem' && sp.el) RPG.lastEl = sp.el;
+function rpgData(id, data){ const sp = spellOf(id); if (id === 'basic') { rpgBasic(data); if (typeof ultAdd === 'function') ultAdd(.25); if (typeof CTS !== 'undefined') CTS.basic = 1; return; } if (!sp) return; if (typeof ultAdd === 'function') { if (sp.ult) ultFire(); else ultAdd(6); } if (typeof CTS !== 'undefined') CTS.cast = 1; if (me.cls === 'elem' && sp.el) RPG.lastEl = sp.el;
   if (sp.k === 'rpg' || sp.k === 'sum') data.t = aimGround(34); if (sp.act === 'tri' && RPG.triDone) { data.pts = RPG.triDone.pts; RPG.triDone = null; }
   if (typeof necroData === 'function') necroData(id, data);
   if (sp.act === 'shield') data.tg = aimAlly(30) || me.peer || 'me';
@@ -62,6 +62,7 @@ function triTick(){ const P = RPG.tri; if (!P) return; if (T > P.t || me.dead) {
 function rpgBasic(data){ const c = me.cls; if (c === 'elem') { data.bel = RPG.lastEl; data.bm = 1.35; } else if (c === 'necro') { data.bel = 'shadow'; data.bm = 1.2; } if (typeof rpgBasic2 === 'function') rpgBasic2(data); }
 /* ---- lancer : dispatch des comportements ---- */
 function rpgCast(data, caster, mine, sp, el, col){ const o = data.o, rk = fin(data.rk) ? data.rk : 1, pot = rk >= 2 ? 1.25 : 1, big = (rk >= 3 ? 1.25 : 1)*(fin(data.zk) ? clamp(data.zk, .5, 3) : 1), t = Array.isArray(data.t) && data.t.every(fin) ? data.t : [o[0], o[2]], dmg = sp.dmg*pot*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1)*(fin(data.q) ? clamp(data.q, .5, 1.3) : 1);
+  if (typeof synElem === 'function' && sp.el) synElem(t, sp.el, caster);
   if (sp.act === 'dragon') castDragon(o, data.d, sp, dmg, big, caster, data.sd | 0);
   else if (sp.act === 'tri') { const P = Array.isArray(data.pts) && data.pts.length === 3 && data.pts.every(p => Array.isArray(p) && p.every(fin)) ? data.pts : null; if (P) castTri(P, dmg, big, caster); }
   else if (sp.act === 'prison') castPrison(t, sp, dmg, big, caster);
@@ -147,7 +148,7 @@ function castApoc(t, sp, dmg, big, by, sd, mine){ const R = sp.r*big, dur = 7, R
 function apocSky(dur){ let e = $('#apocsky'); if (!e) { e = document.createElement('div'); e.id = 'apocsky'; e.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:4;mix-blend-mode:screen;transition:opacity .6s'; document.body.appendChild(e); }
   e.style.opacity = 1; const t0 = T; rpgZone({dur, upd:(dt, k) => { const h = (T*60) % 360; e.style.background = `radial-gradient(ellipse at 50% 0%, hsla(${h},90%,55%,.22), transparent 60%)`; e.style.opacity = k > .9 ? (1 - k)*10 : 1; }, end:() => { e.style.opacity = 0; }}); }
 /* ---- coups reçus (hôte) : prisons brisées, électrocution des monstres mouillés ---- */
-function rpgHurt(m, dmg, f, by){ if (dmg <= 0 || !f) return dmg;
+function rpgHurt(m, dmg, f, by){ if (dmg <= 0 || !f) return dmg; if (f.sn === 'Poings' && (m.stunT > T || m.ipT > T)) dmg *= 1.3;
   if (m.ipT > T && f.sn !== 'Ice Prison' && !f.ipx) { m.ipT = 0; m.stunT = 0; const bonus = (m.ipD || 30)*1.5; W.hits.push(['ishatter', m.id]); shatterFx(m.id); W.hits.push(['qpop', 'Prison brisée !']); if (by === me.peer || by === 'me') qPop('Prison brisée !', '#bfeaff');
     for (const o of rxNear(m.x, m.z, 3)) if (o !== m) hurt(o, bonus*.5, {el:'ice', sn:'Éclats de glace', ipx:1, rx:1}, 0, 0, m.ipBy); dmg += bonus; }
   if (typeof rpgHurt2 === 'function') dmg = rpgHurt2(m, dmg, f, by); return dmg; }

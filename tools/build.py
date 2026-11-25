@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Construit index.html : tools/base.html (le jeu Incantatio Arena) + les modules src/*.js + les points d'accroche ci-dessous."""
 import glob, os, sys
-VERSION = 'v0.5 · 25/11'
+VERSION = 'v0.6 · 25/11'
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 s = open(os.path.join(ROOT, 'tools/base.html')).read(); MISS = []; N = [0]
 def R(a, b, n=1):
@@ -53,7 +53,7 @@ R("const dmg = 15*allyWk()*", "const dmg = 15*allyWk()*(1 + modOf(a.owner, 'gDmg
 R("spd = 5.2*(fury", "spd = 5.2*(1 + modOf(a.owner, 'gSpd'))*(fury")
 R("a.hp + a.max*.015*dt", "a.hp + a.max*.015*(1 + modOf(a.owner, 'gReg'))*dt")
 R("if (titan) { for (const m of [...mons.values()]) { const dd = Math.hypot(m.x - tg.x, m.z - tg.z); if (dd < 3.5", "if (titan || modOf(a.owner, 'gAoe')) { for (const m of [...mons.values()]) { const dd = Math.hypot(m.x - tg.x, m.z - tg.z); if (dd < (titan ? 3.5 : 2.5)")
-R("push:titan ? 3 : 1.2, aid:a.id};", "push:titan ? 3 : 1.2, aid:a.id, dot:modOf(a.owner, 'gFire') || modOf(a.owner, 'gCore') ? 6 : 0, slow:modOf(a.owner, 'gIce') || modOf(a.owner, 'gCore') ? 1.5 : 0};")
+R("push:titan ? 3 : 1.2, aid:a.id};", "push:titan ? 3 : 1.2, aid:a.id, dot:modOf(a.owner, 'gFire') || modOf(a.owner, 'gCore') || a.fireT > T ? 6 : 0, slow:modOf(a.owner, 'gIce') || modOf(a.owner, 'gCore') || a.iceT > T ? 1.5 : 0};")
 R("pot = rk >= 2 ? 1.3 : 1, dur = rk >= 3 ? 1.5 : 1, a = allyOf(caster);", "pot = (rk >= 2 ? 1.3 : 1)*(fin(data.bm) ? clamp(data.bm, .5, 4) : 1), dur = (rk >= 3 ? 1.5 : 1)*(fin(data.du) ? clamp(data.du, .5, 3) : 1), a = allyOf(caster);")
 R("const pool = BLESS.filter(b => !BL.has(b.id)), out = [];", "const pool = BLESS.filter(b => !BL.has(b.id) && rbOk(b)), out = [];")
 R("[60, 30, 10][b.r - 1]", "[60, 30, 12, 5][b.r - 1]")
@@ -71,6 +71,18 @@ R("me.hp = 100", "me.hp = rpgMaxHp()", 2)
 R("$('#hpb').style.width = me.hp + '%'; $('#hpt').textContent = Math.ceil(me.hp) + ' PV';", "$('#hpb').style.width = (me.hp/rpgMaxHp()*100) + '%'; $('#hpt').textContent = Math.ceil(me.hp) + (rpgMaxHp() !== 100 ? ' / ' + rpgMaxHp() : '') + ' PV';")
 R("${rbStack(b)}</p></div>`).join('') + '</div><small class=", "${rbStack(b)}</p></div>`).join('') + '</div>' + rpgStatsHTML() + '<small class=")
 R("function wizardMesh(cls, name){", "function wizardMesh(cls, name){ if (cls === 'glad' && typeof gladMesh === 'function') return gladMesh(name);")
+R("| (a.mv ? 32 : 0)", "| (a.mv ? 32 : 0) | (a.fireT > T ? 64 : 0) | (a.iceT > T ? 128 : 0) | (a.stormT > T ? 256 : 0)", 2)
+R("const gc = fl & 4 ? 0xff5a2a :", "const gc = fl & 64 ? 0xff8a2a : fl & 128 ? 0x9fe8ff : fl & 256 ? 0xffe259 : fl & 4 ? 0xff5a2a :")
+R("a.atk = 1.3/(fury ? 1.4 : 1);", "a.atk = 1.3/(fury ? 1.4 : 1)/(a.stormT > T ? 1.3 : 1);")
+R("(m.gPref && d < 16)", "((m.gPref || rpgFlyAny()) && d < 16)")
+R("function specOffer(el){", "function specOffer(el){ if (rpgCls()) return;")
+R("function grandVoice(text){", "function grandVoice(text){ if (rpgCls()) return false;")
+R("function secretSpell(text){", "function secretSpell(text){ if (rpgCls()) return false;")
+R("function giHud(){", "function giHud(){ if (rpgCls()) { const e = $('#gihud'); if (e) e.style.display = 'none'; return; }")
+R("function riseVoice(n){", "function riseVoice(n){ if (/guard/.test(n)) return false;")
+R("$('#gbody').innerHTML = guideHTML() + encyHTML(); guideToc();", "$('#gbody').innerHTML = rpgGuideHTML() + rpgEncy(); guideToc();")
+R("<span>${n + 1}. ${esc(incOf(sid))}", "<span>${n + 1}. ${(spellOf(sid) || {}).ult ? '★ ' : ''}${esc(incOf(sid))}")
+R("(sealed ? `<li class=\"lock\"><span>~ ${sealed} page", "(rpgCls() ? rpgSealedHTML() : sealed ? `<li class=\"lock\"><span>~ ${sealed} page")
 R("<title>Incantatio Arena</title>", "<title>Incantatio RPG</title>")
 R("    <h1>Incantatio Arena</h1>", "    <h1>Incantatio RPG</h1>")
 R("Choisissez votre école de magie, entrez dans l'arène et <b>criez vos incantations dans le micro</b> : vos coéquipiers vous entendent pour de vrai. Farmez monstres et boss pour récupérer des parchemins et débloquer de nouveaux sorts, en coop ou chacun pour soi.", "Choisissez l'une des cinq classes, entrez dans l'arène et <b>criez vos formules dans le micro</b> (en anglais) : le clic gauche lance votre attaque de base, la voix lance vos sorts. En coop ou chacun pour soi.")

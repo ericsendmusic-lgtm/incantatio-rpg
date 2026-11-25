@@ -40,8 +40,8 @@ function minHost(dt){ for (const n of [...NC.mins.values()]) { const t = MT[n.ty
   const arr = [...NC.mins.values()]; for (let i = 0; i < arr.length; i++) for (let j = i + 1; j < arr.length; j++) { const a = arr[i], b = arr[j], rr = (MT[a.ty].r + MT[b.ty].r)*.8, dx = b.x - a.x, dz = b.z - a.z, d = Math.hypot(dx, dz); if (d < rr && d > 0) { const k = (rr - d)/2/d; a.x -= dx*k; a.z -= dz*k; b.x += dx*k; b.z += dz*k; } } }
 function minDie(n){ NC.mins.delete(n.id); W.hits.push(['ndie', n.id]); minDieFx(n); if (modOf(n.owner, 'mBoom') && T < n.end) { W.hits.push(['nboom', r2(n.x), r2(n.z), 3]); boomFx(n.x, n.z, 3); for (const m of [...mons.values()]) if (Math.hypot(m.x - n.x, m.z - n.z) < 3 + MT[m.type].r) hurt(m, 25*n.wk, {el:'shadow', sn:'Cadavre explosif', rx:1}, 0, 0, n.owner); } }
 function minHurt(id, dmg){ const n = NC.mins.get(id); if (!n) return; n.hp -= dmg; if (n.hp <= 0) minDie(n); }
-function minTarget(m, t, tg, bd){ if (!NC.mins.size || m.charmT > T || t.head || t.prop || t.boss) return null; if (m.nPref === undefined) m.nPref = Math.random() < .25; let best = null, bb = 1e9;
-  for (const n of NC.mins.values()) { const d = Math.hypot(n.x - m.x, n.z - m.z); if (((m.nPref && d < 12) || (d < 6 && d < bd*.8)) && d < bb) { bb = d; best = n; } }
+function minTarget(m, t, tg, bd){ if (!NC.mins.size || m.charmT > T || t.head || t.prop || t.boss) return null; if (m.nPref === undefined) m.nPref = Math.random() < .25; const fly = rpgFlyAny(); let best = null, bb = 1e9;
+  for (const n of NC.mins.values()) { const d = Math.hypot(n.x - m.x, n.z - m.z); if ((((m.nPref || fly) && d < 12) || (d < 6 && d < bd*.8)) && d < bb) { bb = d; best = n; } }
   return best ? {tg:{peer:'#n' + best.id, x:best.x, z:best.z}, bd:bb} : null; }
 function minHitPlayer(peer, dmg){ if (typeof peer === 'string' && peer.startsWith('#n')) { minHurt(+peer.slice(2), dmg); return true; } return false; }
 /* ---- sorts ---- */
