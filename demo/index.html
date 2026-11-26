@@ -6,8 +6,10 @@
 <div style="position:fixed;left:16px;bottom:16px;display:flex;gap:10px;z-index:5;font:600 15px system-ui">
 <button id="bIce" style="padding:10px 16px;border-radius:10px;border:2px solid #0b3a6e;background:#8fd8ff;color:#06264a;cursor:pointer">❄ Ice Prison</button>
 <button id="bWater" style="padding:10px 16px;border-radius:10px;border:2px solid #064a5a;background:#5fd0d8;color:#043039;cursor:pointer">💧 Water Triangle</button>
+<button id="bMic" style="padding:10px 16px;border-radius:10px;border:2px solid #3a2a06;background:#f2c94c;color:#2a1c00;cursor:pointer">🎤 Activer la voix</button>
 <button id="bAtk" style="padding:10px 16px;border-radius:10px;border:2px solid #5a1010;background:#e8705a;color:#2a0606;cursor:pointer">✋ Attaque</button></div>
-<div style="position:fixed;right:12px;top:10px;color:#fff;font:12px system-ui;text-shadow:0 1px 2px #000;z-index:5;text-align:right;max-width:46vw">Incantatio — démo visuelle v1 · glisser pour tourner, molette pour zoomer<br>
+<div id="vstat" style="position:fixed;left:16px;bottom:66px;color:#fff;font:600 15px system-ui;text-shadow:0 1px 3px #000;z-index:5"></div>
+<div style="position:fixed;right:12px;top:10px;color:#fff;font:12px system-ui;text-shadow:0 1px 2px #000;z-index:5;text-align:right;max-width:46vw">Incantatio — démo visuelle v1 · glisser pour tourner, molette pour zoomer · voix : dites « Ice Prison » ou « Water Triangle » (touches 1 et 2)<br>
 <details><summary style="cursor:pointer">Crédits</summary>Old Elven Ruins — Desant_Art (CC-BY 4.0) · Stone Pack — ashkan.fancy (CC-BY 4.0) · Sorcerer — SomeDude (CC-BY 4.0, recoloré) · Drugdör the Golem — Phons (CC-BY 4.0) · Armored Guard Knight — DM-913 (CC-BY 4.0) · Crystal Sword — Wawann (CC-BY 4.0) · Ultimate Nature MegaKit — Quaternius (CC0) · Particle Pack — Kenney (CC0) · Animations — Mixamo (Adobe) · three.js (MIT) · pako (MIT)</details></div>
 <script>
 /* Arène-temple originale (scène de test hors projet), construite avec les pièces d'Old Elven Ruins (Desant_Art, CC-BY),
@@ -344,6 +346,24 @@ function put(o, x, z, sc, ry, y, extra){ const c = o.clone(); c.matrixAutoUpdate
   const cast = (fn, anim) => { if (cur !== AN.idle) return; play(anim, true); setTimeout(() => { const before = new Set(scene.children); fn(); const added = scene.children.filter(c => !before.has(c)); added.forEach(o => { o.userData.s0 = o.scale.clone(); o.scale.multiplyScalar(.01); }); live.push({objs:added, t:0}); }, SHOT ? 0 : 700); };
   document.getElementById('bIce').onclick = () => cast(spellIce, 'cast1');
   document.getElementById('bWater').onclick = () => cast(spellWater, 'cast2');
+  /* ---------------- lancer les sorts à la voix (Vosk, hors ligne, modèle du jeu) ---------------- */
+  const vst = t => document.getElementById('vstat').textContent = t;
+  const PHR = {'ice prison':'bIce', 'water triangle':'bWater', 'attack':'bAtk'};
+  let vOn = false;
+  document.getElementById('bMic').onclick = () => { if (vOn) return; vOn = true; vst('Chargement de la reconnaissance vocale (43 Mo, une seule fois)…');
+    const sc = document.createElement('script'); sc.src = '../vosk/vosk.js'; sc.onerror = () => vst('Reconnaissance vocale indisponible.');
+    sc.onload = async () => { try {
+      const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true, channelCount:1}});
+      const model = await Vosk.createModel('../vosk/model.tar.gz'); model.setLogLevel && model.setLogLevel(-1);
+      const ac = new (window.AudioContext || window.webkitAudioContext)(); const rec = new model.KaldiRecognizer(ac.sampleRate, JSON.stringify(Object.keys(PHR).concat(['[unk]'])));
+      rec.on('result', m => { const t = ((m.result || {}).text || '').trim(); if (!t) return; const id = PHR[t]; vst(id ? '🎤 « ' + t + ' » !' : '🎤 J\'entends : « ' + t + ' »'); if (id) document.getElementById(id).click(); });
+      const src = ac.createMediaStreamSource(stream), node = ac.createScriptProcessor(4096, 1, 1), mute = ac.createGain(); mute.gain.value = 0;
+      node.onaudioprocess = e => { try { rec.acceptWaveformFloat(e.inputBuffer.getChannelData(0), ac.sampleRate); } catch (err) {} };
+      src.connect(node); node.connect(mute); mute.connect(ac.destination);
+      document.getElementById('bMic').textContent = '🎤 Voix active'; vst('Parlez : « Ice Prison » ou « Water Triangle »');
+    } catch (e) { vOn = false; vst('Micro ou reconnaissance indisponible : ' + (e.message || e)); } };
+    document.head.appendChild(sc); };
+  addEventListener('keydown', e => { if (e.key === '1') document.getElementById('bIce').click(); if (e.key === '2') document.getElementById('bWater').click(); if (e.key === '3') document.getElementById('bAtk').click(); });
   document.getElementById('bAtk').onclick = () => { if (cur === AN.idle) play('attack', true); };
   /* ---------------- caméra orbitale ---------------- */
   const tgt = new V3(0, 1.8, CZ - .5); let yaw = Math.atan2(camera.position.x - tgt.x, camera.position.z - tgt.z), pit = .22, dist = camera.position.distanceTo(tgt)*1.7, drag = null;
