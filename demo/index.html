@@ -337,7 +337,7 @@ function put(o, x, z, sc, ry, y, extra){ const c = o.clone(); c.matrixAutoUpdate
   SR.traverse(o => { if (o.isMesh) { o.frustumCulled = false; o.castShadow = true; const m = o.material; if (m.transparent || /glass/.test(m.name)) return; const t = new THREE.MeshToonMaterial({map:m.map, color:m.color, gradientMap:GT_ || undefined, skinning:!!o.isSkinnedMesh, alphaTest:m.alphaTest || 0}); t.name = m.name; o.material = t; } });
   outline(SG, .005, .3);
   const FL = new THREE.FBXLoader(), loadF = u => new Promise(r => FL.load(A + 'anim/' + u + '.fbx', r));
-  const AN = {}; for (const n of ['idle', 'cast1', 'cast2', 'attack']) { const f = await loadF(n); const mx = new THREE.AnimationMixer(f); const clip = f.animations[0]; const act = mx.clipAction(clip); act.play(); mx.update(0); AN[n] = {f, mx, act, clip, apply:makeRetarget(f, SR)}; }
+  const AN = {}; for (const n of ['idle', 'cast1', 'cast2', 'attack']) { const f = await loadF(n); f.rotation.y = SG.rotation.y; f.updateMatrixWorld(true); const mx = new THREE.AnimationMixer(f); const clip = f.animations[0]; const act = mx.clipAction(clip); act.play(); mx.update(0); AN[n] = {f, mx, act, clip, apply:makeRetarget(f, SR)}; }
   let cur = AN.idle, tCur = 0;
   const play = (n, once) => { cur = AN[n]; tCur = 0; cur.mx.setTime(0); cur.once = !!once; };
   log('sorciere ok');
@@ -367,7 +367,7 @@ function put(o, x, z, sc, ry, y, extra){ const c = o.clone(); c.matrixAutoUpdate
   document.getElementById('bAtk').onclick = () => { if (cur === AN.idle) play('attack', true); };
   /* ---------------- caméra orbitale ---------------- */
   const tgt = new V3(0, 1.8, CZ - .5); let yaw = Math.atan2(camera.position.x - tgt.x, camera.position.z - tgt.z), pit = .22, dist = camera.position.distanceTo(tgt)*1.7, drag = null;
-  const el = renderer.domElement; el.style.touchAction = 'none';
+  const el = renderer.domElement; el.style.touchAction = 'none'; if (SHOT) { const Q = new URLSearchParams(location.search); if (Q.get('yaw')) { yaw = +Q.get('yaw'); dist = +(Q.get('d') || 6); tgt.set(K.position.x, 1.2, K.position.z - 1); pit = .1; } }
   el.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY]; el.setPointerCapture(e.pointerId); });
   el.addEventListener('pointermove', e => { if (!drag) return; yaw -= (e.clientX - drag[0])*.005; pit = Math.max(-.05, Math.min(1.2, pit + (e.clientY - drag[1])*.004)); drag = [e.clientX, e.clientY]; });
   el.addEventListener('pointerup', () => drag = null);
